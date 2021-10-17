@@ -3,10 +3,11 @@
 -- IO & managment for MineSweeper
 -- ================================== --
 
---Main - calls initial minesweeper builder and looper
-    --Requires Random Generation, Array builder/editor, UI Looper 
+--Main() - calls initial minesweeper builder and looper
+    --print empty array
+    --looper(intialBuidl(take input))
 
---Looper - prints, waits, and parses user input
+--Looper() - (prints, waits, and parses user input)
     --Print the passed Array
     --Parses input (test whether better to do string operations or multiple seperate inputs)
     --Sends input to mineFieldUpdate
@@ -22,13 +23,13 @@
 --Initial MINE FIELD REQUIREMENTS
 -- ================================== --
 
---initialBuild - creates the array 
-    --get an empty array - either hard code or loop
-    --return populateWithBombs(bombNum, emptyArray, initialPosition)
+--initialBuild() - creates the array 
+    --get an empty array - use hard code or loop (this may be just a simple 2d array at this point) that was used for the main call
+    --return populateWithBombs(bombNum, emptyArray, initialPosition) - where bombNum is the number of bombs left to be added, emptyArray is the correct size that we want for further reference, initialPosition is where a bomb must not be
 
---populateWithBombs ()
-    --generate a random position (an x and a y, or go linear)
+--populateWithBombs () - due to the annoyances of nested if statements with multiple lines, lines 31-35 (inner ifelse) may be better suited in their own minor function
     --if the count is still not 0
+        --generate a random position (an x and a y, or go linear)
         --if the position doesnt already have a bomb in it (and is not the initial guess), update the array 
             --(increase surrounding proximities by 1, and change isBomb to true)
             --feed it back into the function until appropriate number of bombs exist
@@ -36,7 +37,7 @@
     --else
         --return populateProximitiesXPos(array)
  
---populateProximitiesXPos () -- uses isBomb array as reference
+--populateProximitiesXPos () -- uses isBomb array as reference (remember to address whether the initial array is in fact still 2d, we'll be retruning a 3d)
     --move left to right per row adding isBomb to the nextProximity as it goes
     --return populateProximitiesXNeg(newArray)
 
