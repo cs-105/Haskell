@@ -56,6 +56,12 @@
 
 --ALTERNATIVELY loop through the existing array populating it with proximities linearly using a helper
 
+-- loop :: [[int]] -> Int -> Int -> Int -> [[[int]]]
+-- loop [] x y size = [[[]]]
+-- loop (element:restOfArray) x y size = 
+    --check for empty
+    --append getProx of given index to the new array to create a 3d array filled with rows, cols, and [prox, isBomb]
+
 -- getProx :: [Int] -> Int x (row) -> Int y (col) -> Int (sum)
 -- if on (top || bottom)
 -- 	if (left || right)
