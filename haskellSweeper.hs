@@ -53,6 +53,20 @@
 --populateProximitiesXNegYPos () --left and up
     --return array
 
+
+--ALTERNATIVELY loop through the existing array populating it with proximities linearly using a helper
+
+-- getProx :: [Int] -> Int x (row) -> Int y (col) -> Int (sum)
+-- if on (top || bottom)
+-- 	if (left || right)
+-- 		if(left)
+-- 		else (right)
+-- 	else (in middle)
+-- else (its in the middle)
+-- 	if (left || right)
+-- 		if(left)
+-- 		else(right)
+-- 	else (its in the middle)
 -- ============================================
 
 
