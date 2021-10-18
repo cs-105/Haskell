@@ -36,7 +36,7 @@
         --else populateWithBombs(bombNum, array, initialPosition)
     --else
         --return populateProximitiesXPos(array)
- 
+
 --populateProximitiesXPos () -- uses isBomb array as reference (remember to address whether the initial array is in fact still 2d, we'll be retruning a 3d)
     --move left to right per row adding isBomb to the nextProximity as it goes
     --return populateProximitiesXNeg(newArray)
@@ -62,9 +62,78 @@
     --check for empty
     --append getProx of given index to the new array to create a 3d array filled with rows, cols, and [prox, isBomb]
 
--- getProx :: [Int] -> Int x (row) -> Int y (col) -> Int (sum)
--- if on (top || bottom)
--- 	if (left || right)
+
+--params = [[Isbomb]], row, col, sizeOfGrid
+--returns the number of bombs in proximity
+getProx :: [[Int]] -> Int -> Int -> Int -> Int
+getProx array x y size
+  | (y == 0 || y == size) = if (y==0) --if top
+                           then do
+                               if (x == 0 || x == size) --if its on either of the extremes x
+                               then do
+                                   if(x==0) -- if top left
+                                       then ((array!!y)!!(x+1))+((array!!(y+1))!!(x+1))+((array!!(y+1))!!(x))
+                                   else --if top right
+                                       ((array!!y)!!(x-1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))
+                               else --if its in the top middle
+                                   ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y+1))!!(x+1))
+                       else
+                           do
+                               if (x == 0 || x == size) --if its on either of the extremes x
+                               then do
+                                   if(x==0) -- if bottom left
+                                       then ((array!!y)!!(x+1))+((array!!(y-1))!!(x+1))+((array!!(y-1))!!(x))
+                                   else --if bottom right
+                                       ((array!!y)!!(x-1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))
+                               else --if its in the bottom middle
+                                   ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))+((array!!(y-1))!!(x+1))
+  | (x == 0 || x == size) = do
+        if(x==0) -- if left
+            then ((array!!y)!!(x+1))+((array!!(y+1))!!(x+1))+((array!!(y+1))!!(x))+((array!!(y-1))!!(x+1))+((array!!(y-1))!!(x))
+        else --if right
+            ((array!!y)!!(x-1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))
+  | otherwise = --if its in the middle
+        ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y+1))!!(x+1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))+((array!!(y-1))!!(x+1))
+
+--Old Code, do not delete until after bound version is tested
+{- --params = [[Isbomb]], row, col, sizeOfGrid
+--returns the number of bombs in proximity
+getProx :: [[Int]] -> Int -> Int -> Int -> Int
+getProx array x y size = 
+    if (y == 0 || y == size)  -- if on (top || bottom)
+        then if (y==0) --if top
+            then do
+                if (x == 0 || x == size) --if its on either of the extremes x
+                then do
+                    if(x==0) -- if top left
+                        then ((array!!y)!!(x+1))+((array!!(y+1))!!(x+1))+((array!!(y+1))!!(x))
+                    else --if top right
+                        ((array!!y)!!(x-1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))
+                else --if its in the top middle
+                    ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y+1))!!(x+1))
+        else
+            do
+                if (x == 0 || x == size) --if its on either of the extremes x
+                then do
+                    if(x==0) -- if bottom left
+                        then ((array!!y)!!(x+1))+((array!!(y-1))!!(x+1))+((array!!(y-1))!!(x))
+                    else --if bottom right
+                        ((array!!y)!!(x-1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))
+                else --if its in the bottom middle
+                    ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))+((array!!(y-1))!!(x+1))
+    else
+        if (x == 0 || x == size) --if its on either of the extremes x
+            then do
+                if(x==0) -- if left
+                    then ((array!!y)!!(x+1))+((array!!(y+1))!!(x+1))+((array!!(y+1))!!(x))+((array!!(y-1))!!(x+1))+((array!!(y-1))!!(x))
+                else --if right
+                    ((array!!y)!!(x-1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))
+        else --if its in the middle
+                ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y+1))!!(x+1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))+((array!!(y-1))!!(x+1))
+ -}
+
+-- if (y == 0 || y == size)  -- if on (top || bottom)
+--     if (y == 0 || y == size) --if (left || right)
 -- 		if(left)
 -- 		else (right)
 -- 	else (in middle)
