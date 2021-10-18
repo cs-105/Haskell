@@ -61,6 +61,17 @@
 -- loop (element:restOfArray) x y size = 
     --check for empty
     --append getProx of given index to the new array to create a 3d array filled with rows, cols, and [prox, isBomb]
+proxLoop :: [[Int]] -> Int -> Int -> Int -> [[[Int]]]
+proxLoop array x y size
+  | x == size && y == size = [[[((array!!y)!!x),(getProx array x y size)]]]
+  | x /= size = proxLoop array (x+1) y size
+  | otherwise =
+    [[[1, 2]]]
+
+--TODO 
+--loop that builds rows returns ([[array!!y!!x, getProx array x y size] : nextElements array x+1 y size)] - returns 2d array of [isBomb, proximityCount] pairs
+--loop that compiles rows [buildRow array x y size : compileRows array x y+1 size] - returns 3d array
+
 
 
 --params = [[Isbomb]], row, col, sizeOfGrid
