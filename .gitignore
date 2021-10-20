@@ -10,6 +10,7 @@ cabal-dev
 *.dyn_hi
 .hpc
 .hsenv
+.vscode
 .cabal-sandbox/
 cabal.sandbox.config
 *.prof
