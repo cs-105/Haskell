@@ -62,6 +62,10 @@ getInputLoop array message = do
     --else
         --return populateProximitiesXPos(array)
 
+-- =================================== --
+-- 3D Field builders
+-- ================================== --
+
 --populateProximitiesXPos () -- uses isBomb array as reference (remember to address whether the initial array is in fact still 2d, we'll be retruning a 3d)
     --move left to right per row adding isBomb to the nextProximity as it goes
     --return populateProximitiesXNeg(newArray)
@@ -81,22 +85,24 @@ getInputLoop array message = do
 
 --ALTERNATIVELY loop through the existing array populating it with proximities linearly using a helper
 
--- loop :: [[int]] -> Int -> Int -> Int -> [[[int]]]
--- loop [] x y size = [[[]]]
--- loop (element:restOfArray) x y size = 
-    --check for empty
-    --append getProx of given index to the new array to create a 3d array filled with rows, cols, and [prox, isBomb]
-proxLoop :: [[Int]] -> Int -> Int -> Int -> [[[Int]]]
-proxLoop array x y size
-  | x == size && y == size = [[[((array!!y)!!x),(getProx array x y size)]]]
-  | x /= size = proxLoop array (x+1) y size
-  | otherwise =
-    [[[1, 2]]]
+--takes the initial 2d bomb array
+--returns a 3d array filled with cols, rows, [isBomb, proximity, visibilityDesignator]
+proxLoop :: [[Int]] -> Int -> [[[Int]]]
+proxLoop array size =
+  proxLoopCol array 0 size
 
---TODO 
---loop that builds rows returns ([[array!!y!!x, getProx array x y size] : nextElements array x+1 y size)] - returns 2d array of [isBomb, proximityCount] pairs
+
+--loop that builds rows returns ([[array!!y!!x, getProx array x y size] : nextElements array x+1 y size)] - returns 2d array of [isBomb, proximityCount, visibilityDesignator] pairs
+proxLoopRow :: [[Int]] -> Int -> Int -> Int -> [[Int]]
+proxLoopRow array x y size
+  | x == size = [[((array!!y)!!x),(getProx array x y size), 0]] --base case, when done with a row, return the full row
+  | otherwise = [((array!!y)!!x),(getProx array x y size), 0] : (proxLoopRow array (x+1) y size)
+
 --loop that compiles rows [buildRow array x y size : compileRows array x y+1 size] - returns 3d array
-
+proxLoopCol :: [[Int]] -> Int -> Int -> [[[Int]]]
+proxLoopCol array y size
+  | y == size = [(proxLoopRow array 0 y size)] --base case, when done with a row, return the full row
+  | otherwise = (proxLoopRow array 0 y size) : (proxLoopCol array (y+1) size)
 
 
 --params = [[Isbomb]], row, col, sizeOfGrid
@@ -206,7 +212,7 @@ printField3DComplete  array x y size =
 
 getPrintableCharacter :: [Int] -> String
 getPrintableCharacter array
-          | array!!2 == 0 = "?" -- lets say 0 is specifier for unknown, and 2 is index for visibilityDesignator
+  | array!!2 == 0 = "?" -- lets say 0 is specifier for unknown, and 2 is index for visibilityDesignator
   | array!!2 == 1 = "X" -- lets say 1 is specifier for flag
   | otherwise = show (array!!1) -- where m is the index for the proximity count
 
