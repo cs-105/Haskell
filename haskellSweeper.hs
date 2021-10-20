@@ -1,4 +1,6 @@
 
+getSize :: Int
+getSize = 9
 -- =================================== --
 -- IO & managment for MineSweeper
 -- ================================== --
@@ -6,13 +8,36 @@
 --Main() - calls initial minesweeper builder and looper
     --print empty array
     --looper(intialBuidl(take input))
+{-
+main :: IO ()
+main = do
+  --Maybe proxloop should initialize visible aspect as well?
+  getInputLoop (proxLoop (createArray getSize) 0 0 getSize) "Give a position (eg. x y): "
+-}
 
 --Looper() - (prints, waits, and parses user input)
     --Print the passed Array
     --Parses input (test whether better to do string operations or multiple seperate inputs)
-    --Sends input to mineFieldUpdate
-    --Send to the Looper a Bool (isDone?) and the updated Array
+    --Sends input to mineFieldUpdate get array
+    --Send array to the Looper along with the message
+{-
+getInputLoop:: [[[Int]]] -> String -> IO ()
+getInputLoop array message = do
+    putStrLn (printField3D array 0 0 getSize)
+    putStrLn message
 
+    position <- getLine
+
+    if (checkInputValidity words position) -- if valid input
+    then
+        if(isBomb x y)
+            then putStrLn (concat [(printField3DComplete array 0 0), ['\n'], "Game Over"])
+        else getInputLoop (updateMap array x y) "Give a position (eg. x y): "
+    --should also check if any end-game characteristics have been met
+    else
+        getInputTest array "Invalid Input. Give a position (eg. x y): "--invalid input
+
+-}
 --MineField - 3d array of row, col, params -> [[[isVisible, ProximityCount, isBomb], [isVisible, ProximityCount, isBomb], ...]] - where isVisible has 3 options, yes, no, flag
 -- ============================================
 
@@ -159,6 +184,32 @@ getProx array x y size =
 -- =================================== --
 -- Array Helper functions
 -- ================================== --
+
+-- allows creates a singular string from the completed 3d array
+printField3D :: [[[Int]]] -> Int -> Int -> Int -> String
+printField3D  array x y size =
+        if (x == size && y /= size)
+                then  (concat [getPrintableCharacter ((array!!y)!!x), ['\n'], (printField3D array 0 (y+1) size)])
+        else
+        if (y==size) then (getPrintableCharacter ((array!!y)!!x))
+                else concat [(getPrintableCharacter ((array!!y)!!x)), (printField3D array (x+1) y size)]
+
+--call when the game is over
+printField3DComplete :: [[[Int]]] -> Int -> Int -> Int -> String
+printField3DComplete  array x y size =
+        if (x == size && y /= size)
+                then  (concat [show (getPrintableCharacter ((array!!y)!!x)), ['\n'], (printField3DComplete array 0 (y+1) size)])
+        else
+        if (y==size)
+            then (show (getPrintableCharacter ((array!!y)!!x)))
+        else concat [show (getPrintableCharacter ((array!!y)!!x)), (printField3DComplete array (x+1) y size)]
+
+getPrintableCharacter :: [Int] -> String
+getPrintableCharacter array
+          | array!!2 == 0 = "?" -- lets say 0 is specifier for unknown, and 2 is index for visibilityDesignator
+  | array!!2 == 1 = "X" -- lets say 1 is specifier for flag
+  | otherwise = show (array!!1) -- where m is the index for the proximity count
+
 
 -- checkIsBomb(array, x, y) - to quickly check if space is a bomb
 
