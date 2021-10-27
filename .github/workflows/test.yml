@@ -17,6 +17,8 @@ jobs:
     - uses: actions/setup-haskell@v1
     - run: cd sweeper
     - run: pwd
+    - run: ls
+    - run: cabal build
     - run: cabal test
 
 
