@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - begin-workflow
   pull_request:
     branches:
       - main
@@ -15,10 +14,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-haskell@v1
-    # - run: cd /home/runner/work/Haskell/Haskell/sweeper
-    # - run: pwd
-    # - run: ls
-    # - run: file sweeper/
     - run: (cd /home/runner/work/Haskell/Haskell/sweeper ; cabal update)
     - run: (cd /home/runner/work/Haskell/Haskell/sweeper ; cabal build)
     - run: (cd /home/runner/work/Haskell/Haskell/sweeper ; cabal test)
