@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/setup-haskell@v1.1
     - uses: actions/checkout@v2
-    - run: runhaskell Hello.hs
+    - run: runhaskell Hello.hs #hoping we get here
 
 
 
