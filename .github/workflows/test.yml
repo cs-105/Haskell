@@ -15,7 +15,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-haskell@v1
+    - run: pwd
     - run: cd /home/runner/work/Haskell/Haskell
+    - run: pwd
     - run: cabal test
 
 
