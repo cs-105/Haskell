@@ -13,7 +13,7 @@ jobs:
     name: Run-Tests
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/setup-haskell@v1.1
+    - uses: actions/setup-haskell@v1.0
     - uses: actions/checkout@v2
     - run: runhaskell Hello.hs #hoping we get here
 
