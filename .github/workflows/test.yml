@@ -19,7 +19,7 @@ jobs:
     # - run: pwd
     # - run: ls
     # - run: file sweeper/
-    - run: (cd /home/runner/work/Haskell/Haskell/sweeper ; cabal install)
+    - run: (cd /home/runner/work/Haskell/Haskell/sweeper ; cabal update)
     - run: (cd /home/runner/work/Haskell/Haskell/sweeper ; cabal build)
     - run: (cd /home/runner/work/Haskell/Haskell/sweeper ; cabal test)
 
