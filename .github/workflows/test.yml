@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-haskell@v1
-    - run: cd sweeper
+    - run: cd /home/runner/work/Haskell/Haskell/sweeper
     - run: pwd
     - run: ls
     - run: cabal build
