@@ -3,12 +3,11 @@ on:
   push:
     branches:
       - main
+      - begin-workflow
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - begin-workflow
+
 jobs:
   runhaskell:
     name: Run-Tests
