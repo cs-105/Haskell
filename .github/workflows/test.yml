@@ -16,6 +16,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-haskell@v1
     - run: cd sweeper
+    - run: pwd
     - run: cabal test
 
 
