@@ -7,4 +7,4 @@ import qualified Data.Text.IO as TIO
 
 
 someFunc :: IO ()
-someFunc = TIO.putStrLn =<< runRVar randomCow DevURandom
+someFunc = TIO.putStrLn "I am not a cow"
