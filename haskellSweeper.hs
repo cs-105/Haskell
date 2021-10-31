@@ -31,7 +31,8 @@ ioLoopInitial message = do
     --create initial array
     if ((length input == 3) && (input!!0)<getSize && (input!!1) < getSize) -- if valid input
     then do
-        let bombPositions = getBombPositions (input!!0) (input!!1) 10 []
+        --let bombPositions = getBombPositions (input!!0) (input!!1) 10 []
+        let bombPositions = example9x9BombPositions
         ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): "
 
     else
@@ -52,6 +53,7 @@ ioLoopInitial message = do
         -- Otherwise, end condition
 ioLoop:: [[[Int]]] -> String -> IO ()
 ioLoop array message = do
+    --putStrLn (show (length ((array!!0)!!0)))
     putStrLn (printField3D array 0 0 getSize)
     putStrLn message
 
@@ -79,7 +81,7 @@ ioLoop array message = do
         -- Is the region available for more actions (not already dug)?
 validAction :: [Int] -> [[[Int]]] -> Bool
 validAction parsedInput field =
-    ((parsedInput!!0) < getSize && (parsedInput!!1) < getSize) && ((getVisibilityDesignator (parsedInput!!0) (parsedInput!!1) field)/=0)
+    ((parsedInput!!0) < getSize && (parsedInput!!1) < getSize) && ((getVisibilityDesignator (parsedInput!!0) (parsedInput!!1) field)/=2)
 
 
 --parseInput() - take a string, parse it to an [x,y] coordinate pair, along with the action specifier (0 - unflag, 1 - flag, 2 - dig)
@@ -95,7 +97,7 @@ parseInput input = do
     if(length l == 3)
         then if ((length(findIndices (==(l!!0)) rowKeyArray))==1 && (length (findIndices (==(l!!2)) actionKeyArray)==1))
             then
-                [(findIndices (==(l!!0)) rowKeyArray)!!0, read (l!!1), (findIndices (==(l!!2)) rowKeyArray)!!0]
+                [(findIndices (==(l!!0)) rowKeyArray)!!0, read (l!!1), (findIndices (==(l!!2)) actionKeyArray)!!0]
             else []
     else
         if ((length(findIndices (==(l!!0)) rowKeyArray))==1)
@@ -124,7 +126,7 @@ actionKeyArray = ["unflag","flag","dig"]
 
 
 example9x9BombPositions :: [[Int]]
-example9x9BombPositions = [[0,0],[1,8],[3,6],[5,8],[8,0],[1,5],[3,7],[5,0],[3,5]]
+example9x9BombPositions = [[0,0],[1,8],[3,6],[5,8],[8,0],[1,5],[3,7],[5,0],[3,5],[7,6]]
 
 
 -- initializeBombArray() -- Use an array of bomb positions to construct a 2d array
@@ -142,13 +144,13 @@ initializeBombArray bombPositions size =
 --loop that builds rows returns ([[array!!y!!x, getProx array x y size] : nextElements array x+1 y size)] - returns 2d array of [isBomb, proximityCount, visibilityDesignator] pairs
 bombLoopRow :: [[Int]] -> Int -> Int -> Int -> [Int]
 bombLoopRow bombPositions x y size
-  | x == size = if elem [x,y] bombPositions then [1] else [0]--base case, when done with a row, return the full row
+  | x == size-1 = if elem [x,y] bombPositions then [1] else [0]--base case, when done with a row, return the full row
   | otherwise = if elem [x,y] bombPositions then 1 : bombLoopRow bombPositions (x+1) y size else 0 : bombLoopRow bombPositions (x+1) y size
 
 --loop that compiles rows [buildRow array x y size : compileRows array x y+1 size] - returns 3d array
 bombLoopCol :: [[Int]] -> Int -> Int -> [[Int]]
 bombLoopCol bombPositions y size
-  | y == size = [bombLoopRow bombPositions 0 y size] --base case, when done with a row, return the full row
+  | y == size-1 = [bombLoopRow bombPositions 0 y size] --base case, when done with a row, return the full row
   | otherwise = (bombLoopRow bombPositions 0 y size) : (bombLoopCol bombPositions (y+1) size)
 
 
@@ -177,7 +179,7 @@ getBombPositions x y count bombArray = do
 --generatePair -- gives back a random position [x,y]
     --[take time mod by size, take new time and mod by size] 
 generatePair :: [Int]
-generatePair = [0];
+generatePair = [0,1];
 
 
 
@@ -201,13 +203,13 @@ proxLoop array size =
 --loop that builds rows returns ([[array!!y!!x, getProx array x y size] : nextElements array x+1 y size)] - returns 2d array of [isBomb, proximityCount, visibilityDesignator] pairs
 proxLoopRow :: [[Int]] -> Int -> Int -> Int -> [[Int]]
 proxLoopRow array x y size
-  | x == size = [[((array!!y)!!x),(getProx array x y size), 0]] --base case, when done with a row, return the full row
+  | x == size-1 = [[((array!!y)!!x),(getProx array x y size), 0]] --base case, when done with a row, return the full row
   | otherwise = [((array!!y)!!x),(getProx array x y size), 0] : (proxLoopRow array (x+1) y size)
 
 --loop that compiles rows [buildRow array x y size : compileRows array x y+1 size] - returns 3d array
 proxLoopCol :: [[Int]] -> Int -> Int -> [[[Int]]]
 proxLoopCol array y size
-  | y == size = [proxLoopRow array 0 y size] --base case, when done with a row, return the full row
+  | y == size-1 = [proxLoopRow array 0 y size] --base case, when done with a row, return the full row
   | otherwise = (proxLoopRow array 0 y size) : (proxLoopCol array (y+1) size)
 
 
@@ -215,9 +217,9 @@ proxLoopCol array y size
 --returns the number of bombs in proximity
 getProx :: [[Int]] -> Int -> Int -> Int -> Int
 getProx array x y size
-  | (y == 0 || y == size) = if (y==0) --if top
+  | (y == 0 || y == size-1) = if (y==0) --if top
                            then do
-                               if (x == 0 || x == size) --if its on either of the extremes x
+                               if (x == 0 || x == size-1) --if its on either of the extremes x
                                then do
                                    if(x==0) -- if top left
                                        then ((array!!y)!!(x+1))+((array!!(y+1))!!(x+1))+((array!!(y+1))!!(x))
@@ -227,7 +229,7 @@ getProx array x y size
                                    ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y+1))!!(x+1))
                        else
                            do
-                               if (x == 0 || x == size) --if its on either of the extremes x
+                               if (x == 0 || x == size-1) --if its on either of the extremes x
                                then do
                                    if(x==0) -- if bottom left
                                        then ((array!!y)!!(x+1))+((array!!(y-1))!!(x+1))+((array!!(y-1))!!(x))
@@ -235,7 +237,7 @@ getProx array x y size
                                        ((array!!y)!!(x-1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))
                                else --if its in the bottom middle
                                    ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))+((array!!(y-1))!!(x+1))
-  | (x == 0 || x == size) = do
+  | (x == 0 || x == size-1) = do
         if(x==0) -- if left
             then ((array!!y)!!(x+1))+((array!!(y+1))!!(x+1))+((array!!(y+1))!!(x))+((array!!(y-1))!!(x+1))+((array!!(y-1))!!(x))
         else --if right
@@ -254,9 +256,21 @@ getProx array x y size
 
 printField2D :: Int -> Int -> Int -> String
 printField2D x y size
-  | x == size && y /= size = concat ["?", ['\n'], printField2D 0 (y+1) size]
-  | y==size = "?"
-  | otherwise = "?" ++ printField2D (x+1) y size
+  | x == 0 && y/= size+1 = concat [getCoordinateY y, " ", printField2D (x+1) (y) size]
+  | x == size && y==0 = concat [getCoordinateX x, ['\n'], printField2D 0 (y+1) size]
+  | x == size && y/=0 && y/=size+1 = concat ["?", ['\n'], printField2D 0 (y+1) size]
+
+  | y == 0 && x/=size = concat [getCoordinateX x, " ", printField2D (x+1) y size]
+  | y==size+1 = ""
+  | otherwise = concat ["?", " ", printField2D (x+1) y size]
+
+getCoordinateX :: Int -> String
+getCoordinateX x =
+    [" ", "A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","!","@","#","$"]!!x
+
+getCoordinateY :: Int -> String
+getCoordinateY y =
+    [" ","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p"]!!y
 
 
 --used during game to print currently known board
@@ -270,9 +284,9 @@ getPrintableCharacter array
 -- allows creates a singular string from the completed 3d array
 printField3D :: [[[Int]]] -> Int -> Int -> Int -> String
 printField3D array x y size
-  | x == size && y /= size = concat [getPrintableCharacter ((array!!y)!!x), ['\n'], printField3D array 0 (y+1) size]
-  | y==size = getPrintableCharacter ((array!!y)!!x)
-  | otherwise = getPrintableCharacter ((array!!y)!!x) ++ printField3D array (x+1) y size
+  | x == size-1 && y /= size = concat [getPrintableCharacter ((array!!y)!!x), ['\n'], printField3D array 0 (y+1) size]
+  | y==size = ""
+  | otherwise = concat [getPrintableCharacter ((array!!y)!!x), " ", printField3D array (x+1) y size]
 
 
  --- END GAME -----
@@ -287,9 +301,9 @@ getPrintableCharacterEnd array
 --call when the game is over
 printField3DComplete :: [[[Int]]] -> Int -> Int -> Int -> String
 printField3DComplete array x y size
-  | x == size && y /= size = concat [getPrintableCharacterEnd ((array!!y)!!x), ['\n'], printField3DComplete array 0 (y+1) size]
-  | y==size = getPrintableCharacterEnd ((array!!y)!!x)
-  | otherwise = getPrintableCharacterEnd ((array!!y)!!x) ++ printField3DComplete array (x+1) y size
+  | x == size-1 && y /= size = concat [getPrintableCharacterEnd ((array!!y)!!x), ['\n'], printField3DComplete array 0 (y+1) size]
+  | y==size = ""
+  | otherwise = concat [getPrintableCharacterEnd ((array!!y)!!x), " ", printField3DComplete array (x+1) y size]
 
 
 -- ============================================
@@ -344,8 +358,8 @@ fieldUpdateCol array x y action currentY =
 fieldUpdateRow :: [[Int]] -> Int -> Int -> Int -> [[Int]]
 fieldUpdateRow array x action currentX =
     if(x==currentX)
-        then 
-            [(array!!x)!!0, (array!!x)!!1, action] : (tail array)
+        then
+            [((array!!x)!!0), ((array!!x)!!1), action] : (tail array)
     else
         (head array) : fieldUpdateRow (tail array) x action (currentX+1)
 
