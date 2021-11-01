@@ -60,8 +60,14 @@ ioLoop array message = do
     position <- getLine
 
     let input = parseInput position
-
     --create initial array
+    putStrLn "is bomb"
+    putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!0))
+    putStrLn "prox"
+    putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!1))
+    putStrLn "visDes"
+    putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!2))
+
 
     if validAction input array -- if valid input
     then
@@ -97,18 +103,22 @@ parseInput input = do
     if(length l == 3)
         then if ((length(findIndices (==(l!!0)) rowKeyArray))==1 && (length (findIndices (==(l!!2)) actionKeyArray)==1))
             then
-                [(findIndices (==(l!!0)) rowKeyArray)!!0, read (l!!1), (findIndices (==(l!!2)) actionKeyArray)!!0]
+                [(findIndices (==(l!!0)) rowKeyArray)!!0, (findIndices (==(l!!1)) colKeyArray)!!0, (findIndices (==(l!!2)) actionKeyArray)!!0]
             else []
     else
         if ((length(findIndices (==(l!!0)) rowKeyArray))==1)
-            then [(findIndices (==(l!!0)) rowKeyArray)!!0, read (l!!1), 0]  -- if no action provided, asume unflag (least destructive)
+            then [(findIndices (==(l!!0)) rowKeyArray)!!0, (findIndices (==(l!!1)) colKeyArray)!!0, 0]  -- if no action provided, asume unflag (least destructive)
         else
             []
 
 
 --in expert mode, there are only (at max 16 rows, so we start there)
+colKeyArray :: [String]
+colKeyArray = ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p"]
+
+--in expert mode, there are only (at max 16 rows, so we start there)
 rowKeyArray :: [String]
-rowKeyArray = ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p"]
+rowKeyArray = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","!","@","#","$"]
 
 --in expert mode, there are only (at max 16 rows, so we start there)
 actionKeyArray :: [String]
@@ -278,15 +288,24 @@ getPrintableCharacter :: [Int] -> String
 getPrintableCharacter array
   | array!!2 == 0 = "?" -- lets say 0 is specifier for unknown/unflag
   | array!!2 == 1 = "X" -- lets say 1 is specifier for flag
-  | otherwise = show (array!!1) -- where m is the index for the proximity count
+  | otherwise = show (array!!1) -- where m is the index for the proximity count, because it would be visibile if it were a bomb
 
 
 -- allows creates a singular string from the completed 3d array
 printField3D :: [[[Int]]] -> Int -> Int -> Int -> String
 printField3D array x y size
-  | x == size-1 && y /= size = concat [getPrintableCharacter ((array!!y)!!x), ['\n'], printField3D array 0 (y+1) size]
-  | y==size = ""
-  | otherwise = concat [getPrintableCharacter ((array!!y)!!x), " ", printField3D array (x+1) y size]
+  | x == 0 && y/= size+1 = concat [getCoordinateY y, " ", printField3D array (x+1) y size]
+  | x == size && y==0 = concat [getCoordinateX x, ['\n'], printField3D array 0 (y+1) size]
+  | x == size && y/=0 && y/=size+1 = concat [getPrintableCharacter ((array!!(y-1))!!(x-1)), ['\n'], printField3D array 0 (y+1) size]
+
+  | y == 0 && x/=size = concat [getCoordinateX x, " ", printField3D array (x+1) y size]
+  | y==size+1 = ""
+  | otherwise = concat [getPrintableCharacter ((array!!(y-1))!!(x-1)), " ", printField3D array (x+1) y size]
+
+
+--   | x == size-1 && y /= size = concat [getPrintableCharacter ((array!!y)!!x), ['\n'], printField3D array 0 (y+1) size]
+--   | y==size = ""
+--   | otherwise = concat [getPrintableCharacter ((array!!y)!!x), " ", printField3D array (x+1) y size]
 
 
  --- END GAME -----
@@ -301,9 +320,13 @@ getPrintableCharacterEnd array
 --call when the game is over
 printField3DComplete :: [[[Int]]] -> Int -> Int -> Int -> String
 printField3DComplete array x y size
-  | x == size-1 && y /= size = concat [getPrintableCharacterEnd ((array!!y)!!x), ['\n'], printField3DComplete array 0 (y+1) size]
-  | y==size = ""
-  | otherwise = concat [getPrintableCharacterEnd ((array!!y)!!x), " ", printField3DComplete array (x+1) y size]
+  | x == 0 && y/= size+1 = concat [getCoordinateY y, " ", printField3DComplete array (x+1) y size]
+  | x == size && y==0 = concat [getCoordinateX x, ['\n'], printField3DComplete array 0 (y+1) size]
+  | x == size && y/=0 && y/=size+1 = concat [getPrintableCharacterEnd ((array!!(y-1))!!(x-1)), ['\n'], printField3DComplete array 0 (y+1) size]
+
+  | y == 0 && x/=size = concat [getCoordinateX x, " ", printField3DComplete array (x+1) y size]
+  | y==size+1 = ""
+  | otherwise = concat [getPrintableCharacterEnd ((array!!(y-1))!!(x-1)), " ", printField3DComplete array (x+1) y size]
 
 
 -- ============================================
@@ -349,18 +372,18 @@ fieldUpdate array x y action =
 
 
 fieldUpdateCol :: [[[Int]]] -> Int -> Int -> Int -> Int -> [[[Int]]]
-fieldUpdateCol array x y action currentY =
-    if(y==currentY)
-        then fieldUpdateRow (head array) x action 0 : (tail array)
+fieldUpdateCol (first:rest) x y action currentY =
+    if y==currentY
+        then fieldUpdateRow first x action 0 : rest
     else
-        (head array) : fieldUpdateCol (tail array) x y action (currentY+1)
+        first : fieldUpdateCol rest x y action (currentY+1)
 
 fieldUpdateRow :: [[Int]] -> Int -> Int -> Int -> [[Int]]
-fieldUpdateRow array x action currentX =
-    if(x==currentX)
+fieldUpdateRow (first:rest) x action currentX =
+    if x==currentX
         then
-            [((array!!x)!!0), ((array!!x)!!1), action] : (tail array)
+            [(first!!0), (first!!1), action] : rest
     else
-        (head array) : fieldUpdateRow (tail array) x action (currentX+1)
+        first : fieldUpdateRow rest x action (currentX+1)
 
 -- ============================================
