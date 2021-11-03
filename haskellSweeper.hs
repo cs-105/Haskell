@@ -33,8 +33,10 @@ ioLoopInitial message = do
     then do
         --let bombPositions = getBombPositions (input!!0) (input!!1) 10 []
         let bombPositions = example9x9BombPositions
-        ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): "
-        --ioLoop (scanInitial (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1)) "Give a position (eg. x y): "
+        --ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): " --Old method
+        if(input!!2==2)
+            then ioLoop (scanInitial (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1)) "Give a position (eg. x y): "
+            else ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): "
     else
         ioLoopInitial "Invalid Input. Give a position (eg. x y): "--invalid input
 
@@ -54,6 +56,7 @@ ioLoopInitial message = do
 ioLoop:: [[[Int]]] -> String -> IO ()
 ioLoop array message = do
     --putStrLn (show (length ((array!!0)!!0)))
+    putStr ['\n','\n']
     putStrLn (printField3D array 0 0 getSize)
     putStrLn message
 
@@ -70,14 +73,17 @@ ioLoop array message = do
     putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!1))
     putStrLn "visDes"
     putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!2))
+    putStrLn (show (length (scanShouldVisible array [] (input!!0) (input!!1)))) --how many are unveiled 
 -}
-
     --create initial array
     if validAction input array -- if valid input/action
     then
-        if(getIsBomb (input!!0) (input!!1) array)
+        if((input!!2 ==2 ) && getIsBomb (input!!0) (input!!1) array)
             then putStrLn (concat [(printField3DComplete array 0 0 getSize), ['\n'], "Game Over"])
-        else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): "
+        else if(input!!2==2)
+                then ioLoop (scanInitial array (input!!0) (input!!1)) "Give a position (eg. x y): "
+            else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): "
+        
     --should also check if any end-game characteristics have been met
     else
         ioLoop array "Invalid Input. Give a position (eg. x y): "--invalid input
@@ -398,14 +404,14 @@ fieldUpdateRow (first:rest) x action currentX =
 -- =================================== --
 -- Scanning Functions (reveal area)
 -- ================================== --
-{-
+
 scanInitial :: [[[Int]]] -> Int -> Int -> [[[Int]]]
 scanInitial field x y = scanUpdateLoop field (scanShouldVisible field [] x y)
 
 scanUpdateLoop :: [[[Int]]] -> [[Int]] -> [[[Int]]]
 scanUpdateLoop field (position:rest) =
-    if null position
-        then field
+    if rest == []
+        then (fieldUpdate field (position!!0) (position!!1) 2)
     else scanUpdateLoop (fieldUpdate field (position!!0) (position!!1) 2) rest
 
 -- TODO test
@@ -415,24 +421,24 @@ scanUpdateLoop field (position:rest) =
     --recursive loop = [x,y] : recursion of each position (L,TL,T,TR,R,BR,B,BL)
 scanShouldVisible :: [[[Int]]] -> [[Int]] ->Int -> Int -> [[Int]]
 scanShouldVisible field positions x y
-  | getVisibilityDesignator x y field == 2 = []
-  | elem [x,y] positions = []
-  | getProximity x y field > 0 = [[x,y]]
-  | otherwise = [x,y] : scanSurrounding field positions x y 9 9
+  | getVisibilityDesignator x y field == 2 = positions
+  | elem [x,y] positions = positions
+  | getProximity x y field > 0 = [x,y]:positions
+  | otherwise = scanSurrounding field positions x y 9 9
 
 --TODO test
 scanSurrounding :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
 scanSurrounding field positions x y xSize ySize
-  | elem [x,y] positions = []                         --if already contains, return
-  | x == xSize-1 && y==0 = scanSurroundingTR field positions x y        --top right - scan L,LB,B
-  | x == 0 && y==0 = scanSurroundingTL field positions x y              --top left - scan R,RB,B
-  | y == 0 = scanSurroundingT field positions x y                       --top middle - scan L,LB,B,RB,R
-  | x == xSize-1 && y==ySize-1 = scanSurroundingBR field positions x y  --bottom right - scan T,TL,L
-  | x == 0 && y==ySize-1 = scanSurroundingBL field positions x y        --bottom left - scan T,TR,R
-  | y==ySize-1 = scanSurroundingB field positions x y                   --bottom middle - scan L,TL,T,TR,R
-  | x == 0 = scanSurroundingL field positions x y                       --left - scan T,TR,R,BR,B
-  | x == xSize-1 = scanSurroundingR field positions x y                 --right - scan T,TL,L,BL,B
-  | otherwise = scanSurroundingM field positions x y                    --middle/center - scan T,TR,R,BR,B,BL,L,TL
+  | elem [x,y] positions = positions                         --if already contains, return
+  | x == xSize-1 && y==0 = scanSurroundingTR field ([x,y]:positions) x y        --top right - scan L,LB,B
+  | x == 0 && y==0 = scanSurroundingTL field ([x,y]:positions) x y              --top left - scan R,RB,B
+  | y == 0 = scanSurroundingT field ([x,y]:positions) x y                       --top middle - scan L,LB,B,RB,R
+  | x == xSize-1 && y==ySize-1 = scanSurroundingBR field ([x,y]:positions) x y  --bottom right - scan T,TL,L
+  | x == 0 && y==ySize-1 = scanSurroundingBL field ([x,y]:positions) x y        --bottom left - scan T,TR,R
+  | y==ySize-1 = scanSurroundingB field ([x,y]:positions) x y                   --bottom middle - scan L,TL,T,TR,R
+  | x == 0 = scanSurroundingL field ([x,y]:positions) x y                       --left - scan T,TR,R,BR,B
+  | x == xSize-1 = scanSurroundingR field ([x,y]:positions) x y                 --right - scan T,TL,L,BL,B
+  | otherwise = scanSurroundingM field ([x,y]:positions) x y                    --middle/center - scan T,TR,R,BR,B,BL,L,TL
 
 
 --Key for Future area debugging
@@ -488,6 +494,6 @@ scanSurroundingT field positions x y =
 
 
 -- ============================================
--}
+
 
 
