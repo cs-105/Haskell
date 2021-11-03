@@ -34,7 +34,7 @@ ioLoopInitial message = do
         --let bombPositions = getBombPositions (input!!0) (input!!1) 10 []
         let bombPositions = example9x9BombPositions
         ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): "
-
+        --ioLoop (scanInitial (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1)) "Give a position (eg. x y): "
     else
         ioLoopInitial "Invalid Input. Give a position (eg. x y): "--invalid input
 
@@ -60,16 +60,20 @@ ioLoop array message = do
     position <- getLine
 
     let input = parseInput position
-    --create initial array
+
+
+
+    {- --Debugging
     putStrLn "is bomb"
     putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!0))
     putStrLn "prox"
     putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!1))
     putStrLn "visDes"
     putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!2))
+-}
 
-
-    if validAction input array -- if valid input
+    --create initial array
+    if validAction input array -- if valid input/action
     then
         if(getIsBomb (input!!0) (input!!1) array)
             then putStrLn (concat [(printField3DComplete array 0 0 getSize), ['\n'], "Game Over"])
@@ -87,7 +91,7 @@ ioLoop array message = do
         -- Is the region available for more actions (not already dug)?
 validAction :: [Int] -> [[[Int]]] -> Bool
 validAction parsedInput field =
-    ((parsedInput!!0) < getSize && (parsedInput!!1) < getSize) && ((getVisibilityDesignator (parsedInput!!0) (parsedInput!!1) field)/=2)
+    ((length parsedInput) == 3 && (parsedInput!!0) < getSize && (parsedInput!!1) < getSize) && ((getVisibilityDesignator (parsedInput!!0) (parsedInput!!1) field)/=2)
 
 
 --parseInput() - take a string, parse it to an [x,y] coordinate pair, along with the action specifier (0 - unflag, 1 - flag, 2 - dig)
@@ -101,12 +105,12 @@ parseInput :: String -> [Int]
 parseInput input = do
     let l = (words input);
     if(length l == 3)
-        then if ((length(findIndices (==(l!!0)) rowKeyArray))==1 && (length (findIndices (==(l!!2)) actionKeyArray)==1))
+        then if (elem (l!!0) rowKeyArray && elem (l!!1) colKeyArray && elem (l!!2) actionKeyArray)
             then
                 [(findIndices (==(l!!0)) rowKeyArray)!!0, (findIndices (==(l!!1)) colKeyArray)!!0, (findIndices (==(l!!2)) actionKeyArray)!!0]
             else []
     else
-        if ((length(findIndices (==(l!!0)) rowKeyArray))==1)
+        if (elem (l!!0) rowKeyArray && elem (l!!1) colKeyArray)
             then [(findIndices (==(l!!0)) rowKeyArray)!!0, (findIndices (==(l!!1)) colKeyArray)!!0, 0]  -- if no action provided, asume unflag (least destructive)
         else
             []
@@ -386,4 +390,104 @@ fieldUpdateRow (first:rest) x action currentX =
     else
         first : fieldUpdateRow rest x action (currentX+1)
 
+
 -- ============================================
+
+
+
+-- =================================== --
+-- Scanning Functions (reveal area)
+-- ================================== --
+{-
+scanInitial :: [[[Int]]] -> Int -> Int -> [[[Int]]]
+scanInitial field x y = scanUpdateLoop field (scanShouldVisible field [] x y)
+
+scanUpdateLoop :: [[[Int]]] -> [[Int]] -> [[[Int]]]
+scanUpdateLoop field (position:rest) =
+    if null position
+        then field
+    else scanUpdateLoop (fieldUpdate field (position!!0) (position!!1) 2) rest
+
+-- TODO test
+--take the initial positon, then recursively add surrounding positions that should be visible (can then be fed as a loop to fieldUpdate)
+    --base case = [] empty array when the position should not be made visible (if it has already been made visible)
+    --second base case = [x,y] when the position has a prox > 0
+    --recursive loop = [x,y] : recursion of each position (L,TL,T,TR,R,BR,B,BL)
+scanShouldVisible :: [[[Int]]] -> [[Int]] ->Int -> Int -> [[Int]]
+scanShouldVisible field positions x y
+  | getVisibilityDesignator x y field == 2 = []
+  | elem [x,y] positions = []
+  | getProximity x y field > 0 = [[x,y]]
+  | otherwise = [x,y] : scanSurrounding field positions x y 9 9
+
+--TODO test
+scanSurrounding :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+scanSurrounding field positions x y xSize ySize
+  | elem [x,y] positions = []                         --if already contains, return
+  | x == xSize-1 && y==0 = scanSurroundingTR field positions x y        --top right - scan L,LB,B
+  | x == 0 && y==0 = scanSurroundingTL field positions x y              --top left - scan R,RB,B
+  | y == 0 = scanSurroundingT field positions x y                       --top middle - scan L,LB,B,RB,R
+  | x == xSize-1 && y==ySize-1 = scanSurroundingBR field positions x y  --bottom right - scan T,TL,L
+  | x == 0 && y==ySize-1 = scanSurroundingBL field positions x y        --bottom left - scan T,TR,R
+  | y==ySize-1 = scanSurroundingB field positions x y                   --bottom middle - scan L,TL,T,TR,R
+  | x == 0 = scanSurroundingL field positions x y                       --left - scan T,TR,R,BR,B
+  | x == xSize-1 = scanSurroundingR field positions x y                 --right - scan T,TL,L,BL,B
+  | otherwise = scanSurroundingM field positions x y                    --middle/center - scan T,TR,R,BR,B,BL,L,TL
+
+
+--Key for Future area debugging
+--    (scanShouldVisible field positions (x+1) y)         --R
+--    (scanShouldVisible field positions (x+1) (y+1))     --BR
+--    (scanShouldVisible field positions x (y+1))         --B
+--    (scanShouldVisible field positions (x-1) (y+1))     --BL
+--    (scanShouldVisible field positions (x-1) y)         --L
+    -- (scanShouldVisible field positions (x-1) (y-1))     --TL
+    -- (scanShouldVisible field positions x (y-1))         --T
+    -- (scanShouldVisible field positions (x+1) (y-1))     --TR
+
+
+scanSurroundingM :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
+scanSurroundingM field positions x y =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1)) x (y-1))  (x-1) (y-1))  (x-1) y) (x-1) (y+1)) x (y+1)) (x+1) (y+1)) (x+1) y)
+
+scanSurroundingTR :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
+scanSurroundingTR field positions x y =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x-1) y)  (x-1) (y+1))  x (y+1))
+
+scanSurroundingTL :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
+scanSurroundingTL field positions x y =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions x (y+1)) (x+1) (y+1)) (x+1) y)
+
+
+scanSurroundingL :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
+scanSurroundingL field positions x y =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1)) x (y-1)) x (y+1)) (x+1) (y+1)) (x+1) y)
+
+
+scanSurroundingR :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
+scanSurroundingR field positions x y =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions x (y-1)) (x-1) (y-1)) (x-1) y) (x-1) (y+1)) x (y+1))
+
+scanSurroundingB :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
+scanSurroundingB field positions x y =
+   (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1)) x (y-1)) (x-1) (y-1)) (x-1) y) (x+1) y)
+
+
+scanSurroundingBL :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
+scanSurroundingBL field positions x y =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1)) x (y-1)) (x+1) y)
+
+scanSurroundingBR :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
+scanSurroundingBR field positions x y =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions x (y-1)) (x-1) (y-1)) (x-1) y)
+
+
+scanSurroundingT :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
+scanSurroundingT field positions x y =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x-1) y) (x-1) (y+1)) x (y+1)) (x+1) (y+1)) (x+1) y)
+
+
+-- ============================================
+-}
+
+
