@@ -64,17 +64,6 @@ ioLoop array message = do
 
     let input = parseInput position
 
-
-
-    {- --Debugging
-    putStrLn "is bomb"
-    putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!0))
-    putStrLn "prox"
-    putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!1))
-    putStrLn "visDes"
-    putStrLn (show (((getPositionTuple (input!!0) (input!!1) array))!!2))
-    putStrLn (show (length (scanShouldVisible array [] (input!!0) (input!!1)))) --how many are unveiled 
--}
     --create initial array
     if validAction input array -- if valid input/action
     then
@@ -83,11 +72,10 @@ ioLoop array message = do
         else if(input!!2==2)
                 then ioLoop (scanInitial array (input!!0) (input!!1)) "Give a position (eg. x y): "
             else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): "
-        
+
     --should also check if any end-game characteristics have been met
     else
         ioLoop array "Invalid Input. Give a position (eg. x y): "--invalid input
-
 
 
 
@@ -144,7 +132,7 @@ actionKeyArray = ["unflag","flag","dig"]
 --Initial BOMB FIELD REQUIREMENTS
 -- ================================== --
 
-
+--here's an example distirbution of 10 bombs 
 example9x9BombPositions :: [[Int]]
 example9x9BombPositions = [[0,0],[1,8],[3,6],[5,8],[8,0],[1,5],[3,7],[5,0],[3,5],[7,6]]
 
@@ -273,7 +261,7 @@ getProx array x y size
 -- Array IO Helper functions
 -- ================================== --
 
-
+--Prints the UI spread for the user's intial choice (DOES NOT CREATE A FIELD)
 printField2D :: Int -> Int -> Int -> String
 printField2D x y size
   | x == 0 && y/= size+1 = concat [getCoordinateY y, " ", printField2D (x+1) (y) size]
@@ -284,16 +272,16 @@ printField2D x y size
   | y==size+1 = ""
   | otherwise = concat ["?", " ", printField2D (x+1) y size]
 
+--Hardcoded arrays - Allows for quick indexing and creation of the UI Coordinates
 getCoordinateX :: Int -> String
 getCoordinateX x =
     [" ", "A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","!","@","#","$"]!!x
-
 getCoordinateY :: Int -> String
 getCoordinateY y =
     [" ","a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p"]!!y
 
 
---used during game to print currently known board
+--finds what a single point should be represented as when printed - (used during game to print currently known board)
 getPrintableCharacter :: [Int] -> String
 getPrintableCharacter array
   | array!!2 == 0 = "?" -- lets say 0 is specifier for unknown/unflag
@@ -301,7 +289,7 @@ getPrintableCharacter array
   | otherwise = show (array!!1) -- where m is the index for the proximity count, because it would be visibile if it were a bomb
 
 
--- allows creates a singular string from the completed 3d array
+-- creates a singular formated string from the completed 3d array
 printField3D :: [[[Int]]] -> Int -> Int -> Int -> String
 printField3D array x y size
   | x == 0 && y/= size+1 = concat [getCoordinateY y, " ", printField3D array (x+1) y size]
@@ -313,21 +301,16 @@ printField3D array x y size
   | otherwise = concat [getPrintableCharacter ((array!!(y-1))!!(x-1)), " ", printField3D array (x+1) y size]
 
 
---   | x == size-1 && y /= size = concat [getPrintableCharacter ((array!!y)!!x), ['\n'], printField3D array 0 (y+1) size]
---   | y==size = ""
---   | otherwise = concat [getPrintableCharacter ((array!!y)!!x), " ", printField3D array (x+1) y size]
+ --v-v-v- END GAME -v-v-v-v-
 
-
- --- END GAME -----
-
---used at the end of the game to print all areas
+--at the end of the game there are only 2 visible options (bomb or proximity count)
 getPrintableCharacterEnd :: [Int] -> String
 getPrintableCharacterEnd array
   | array!!0 == 0 = show (array!!1) -- if its not a bomb, then print proximity
   | otherwise = "B" -- if it is a bomb, print B
 
 
---call when the game is over
+--call when the game is over (creates a single formated string with full visibility)
 printField3DComplete :: [[[Int]]] -> Int -> Int -> Int -> String
 printField3DComplete array x y size
   | x == 0 && y/= size+1 = concat [getCoordinateY y, " ", printField3DComplete array (x+1) y size]
@@ -352,21 +335,25 @@ getPositionTuple :: Int -> Int -> [[[Int]]] -> [Int]
 getPositionTuple x y array =
     (array!!y)!!x
 
+--takes the field and the coordinate to tell if its a bomb
 getIsBomb :: Int -> Int -> [[[Int]]] -> Bool
 getIsBomb x y array =
     (getPositionTuple x y array)!!0 == 1
 
 {-
--- example
+-- not used
 getIsBombEfficient :: [[[Int]]] -> Int -> Int -> Bool
 getIsBombEfficient array x y =
     1== ((array!!y)!!x)!!0-}
 
+--takes the field and the coordinate to tell the proximity count
 getProximity :: Int -> Int -> [[[Int]]] -> Int
 getProximity x y array =
     (getPositionTuple x y array)!!1
 
---0 is 'unknown', 1 is 'flag', 2 is 'dug'
+
+--takes the field and the coordinate to tell the proximity count
+    --0 is 'unknown', 1 is 'flag', 2 is 'dug'
 getVisibilityDesignator :: Int -> Int -> [[[Int]]] -> Int
 getVisibilityDesignator x y array =
     (getPositionTuple x y array)!!2
@@ -380,14 +367,14 @@ fieldUpdate :: [[[Int]]] -> Int -> Int -> Int -> [[[Int]]]
 fieldUpdate array x y action =
     fieldUpdateCol array x y action 0
 
-
+--gets to the correct row
 fieldUpdateCol :: [[[Int]]] -> Int -> Int -> Int -> Int -> [[[Int]]]
 fieldUpdateCol (first:rest) x y action currentY =
     if y==currentY
         then fieldUpdateRow first x action 0 : rest
     else
         first : fieldUpdateCol rest x y action (currentY+1)
-
+--gets to the correct element in the row, and updates
 fieldUpdateRow :: [[Int]] -> Int -> Int -> Int -> [[Int]]
 fieldUpdateRow (first:rest) x action currentX =
     if x==currentX
@@ -396,7 +383,17 @@ fieldUpdateRow (first:rest) x action currentX =
     else
         first : fieldUpdateRow rest x action (currentX+1)
 
+--VICTORY CONDITIONS:
+--Go through the whole array, get the amount of 
+getPoints :: [[[Int]]] -> Int -> Int -> Int -> Int -> Int
+getPoints field x y xSize ySize
+  | x == xSize-1 = if getVisibilityDesignator x y field == 2 then 1 + getPoints field 0 (y+1) xSize ySize else 0 + getPoints field 0 (y+1) xSize ySize
+  | y==ySize = 0
+  | otherwise = if getVisibilityDesignator x y field == 2 then 1 + getPoints field (x+1) y xSize ySize else 0 + getPoints field (x+1) y xSize ySize
 
+isVictory :: [[[Int]]] -> Int -> Int -> Int -> Int -> Int -> Bool
+isVictory field x y xSize ySize bombCount =
+    ((xSize*ySize)-bombCount) == getPoints field 0 0 xSize ySize
 -- ============================================
 
 
@@ -426,7 +423,7 @@ scanShouldVisible field positions x y
   | getProximity x y field > 0 = [x,y]:positions
   | otherwise = scanSurrounding field positions x y 9 9
 
---TODO test
+--goes through each possible condtion to ensure no indexing errors
 scanSurrounding :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
 scanSurrounding field positions x y xSize ySize
   | elem [x,y] positions = positions                         --if already contains, return
