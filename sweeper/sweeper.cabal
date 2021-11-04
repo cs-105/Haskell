@@ -29,12 +29,10 @@ library
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-    build-depends:    base ^>=4.14.3.0,
-                      split,
-                      ascii-cows,
-                      random-source,
-                      random-fu,
-                      text
+    build-depends:    
+        base >=4.14 && <4.16,
+        random >=1.1 && <1.1.1,
+        HUnit
     hs-source-dirs:   src
     default-language: Haskell2010
 
@@ -47,8 +45,21 @@ executable sweeper
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:
-        base ^>=4.14.3.0,
-        sweeper
+        base >=4.14 && <4.16,
+        random >=1.1 && <1.1.1,
+        sweeper,
+        HUnit ^>= 1.6.2.0
 
     hs-source-dirs:   app
     default-language: Haskell2010
+
+test-suite spec
+    type:               exitcode-stdio-1.0
+    main-is:            Main.hs
+    hs-source-dirs:     test
+    default-language:   Haskell2010
+
+    build-depends:
+        base  >=4.14 && <4.16,
+        sweeper,
+        HUnit ^>= 1.6.2.0

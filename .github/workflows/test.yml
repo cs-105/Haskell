@@ -1,0 +1,16 @@
+name: Haskell-CI
+on: [push]
+
+jobs:
+  runhaskell:
+    name: Testing
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-haskell@v1
+    - run: (cd /home/runner/work/Haskell/Haskell/sweeper ; cabal update)
+    - run: (cd /home/runner/work/Haskell/Haskell/sweeper ; cabal build)
+    - run: (cd /home/runner/work/Haskell/Haskell/sweeper ; cabal test)
+
+
+
