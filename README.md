@@ -7,7 +7,7 @@
 * [Launch](#launch)
 
 ## Introduction
-This is a Haskell implementation and solver of Minesweeper for a college course on Programming Languages. Our aim of the project is to highlight the uique aspects of Haskell as a functional programming language, including its provability in the solver portion of the project. 
+This is a Haskell implementation and solver of Minesweeper for a college course on Programming Languages. Our aim of the project is to highlight the unique aspects of Haskell as a functional programming language, including its provability in the solver portion of the project. 
 
 ## Technologies
 * Haskell version: 
