@@ -3,7 +3,8 @@ module Main where
 --import qualified MyLib (someFunc)
 import Data.List
 
+import System.Random
+
 main :: IO ()
 main = do
-  putStrLn "Hello, Haskell!"
-  --MyLib.someFunc
+  putStr . show =<< randomRIO (0, 100 :: Int)
