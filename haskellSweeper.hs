@@ -69,7 +69,7 @@ ioLoop array message = do
     if validAction input array -- if valid input/action
     then
         if((input!!2 ==2 ) && getIsBomb (input!!0) (input!!1) array)
-            then putStrLn (concat [(printField3DComplete array 0 0 getSize), ['\n'], "Game Over"])
+            then putStrLn (concat [['\n','\n'],(printField3DComplete array 0 0 getSize), ['\n'], "Game Over"])
         else if(input!!2==2)
                 then ioLoop (scanInitial array (input!!0) (input!!1)) "Give a position (eg. x y): "
             else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): "
@@ -181,28 +181,6 @@ getBombPositions x y count bombArray = do
         else
             getBombPositions x y (count-1) (temp:bombArray)
     else bombArray
-
-
---  MineField defined - 3d array of row, col, params -> [[[isVisible, ProximityCount, isBomb], [isVisible, ProximityCount, isBomb], ...]] - where isVisible has 3 options, yes, no, flag
-
---takes the initial 2d bomb array, and the size (square)
---returns a 3d array filled with cols, rows, [isBomb, proximity, visibilityDesignator]
-proxLoop :: [[Int]] -> Int -> [[[Int]]]
-proxLoop array size =
-  proxLoopCol array 0 size
-
-
---loop that builds rows returns ([[array!!y!!x, getProx array x y size] : nextElements array x+1 y size)] - returns 2d array of [isBomb, proximityCount, visibilityDesignator] pairs
-proxLoopRow :: [[Int]] -> Int -> Int -> Int -> [[Int]]
-proxLoopRow array x y size
-  | x == size = [[((array!!y)!!x),(getProx array x y size), 0]] --base case, when done with a row, return the full row
-  | otherwise = [((array!!y)!!x),(getProx array x y size), 0] : (proxLoopRow array (x+1) y size)
-
---loop that compiles rows [buildRow array x y size : compileRows array x y+1 size] - returns 3d array
-proxLoopCol :: [[Int]] -> Int -> Int -> [[[Int]]]
-proxLoopCol array y size
-  | y == size = [(proxLoopRow array 0 y size)] --base case, when done with a row, return the full row
-  | otherwise = (proxLoopRow array 0 y size) : (proxLoopCol array (y+1) size)
 
 --TODO (Note that this will have to deal with IO sideeffect)
 --generatePair -- gives back a random position [x,y]
@@ -512,6 +490,3 @@ scanSurroundingT field positions x y =
 
 
 -- ============================================
-
-
-
