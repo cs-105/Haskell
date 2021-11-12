@@ -2,8 +2,8 @@ import Data.List (findIndices)
 -- =================================== --
 -- CONST Testing
 -- ================================== --
-getSize :: Int
-getSize = 9
+--getSize :: Int
+--getSize = 9
 
 -- ================================== --
 
@@ -17,31 +17,86 @@ getSize = 9
 --Main() - calls initial minesweeper builder and looper
 main :: IO ()
 main = do
-    ioLoopInitial "Give a position (eg. x y): "
+    --ioLoopInitial [9,9,10] "Give a position (eg. x y): "
+    ioDificultyLoop ""
+
+--ioDificultyLoop() - (prints, waits, parses user input,)
+--continually waits for correct user input, once it exists, moves on to ioLoopInitial (which waits for correct position input)
+ioDificultyLoop :: String -> IO ()
+ioDificultyLoop message = do
+  putStrLn message
+  putStrLn "Choose A Difficulty: (Defaults to easy)"
+  putStrLn "Easy: 1   Intermediate: 2   Expert: 3     Custom: 4"
+
+  response <- getLine
+
+  let input = ((words response) !! 0)
+  if input == "4" || input == "Custom"
+      then parseSizeInput
+  else ioLoopInitial (difficultySwitch input) "Give a position (eg. x y): "
+
+--TODO
+parseSizeInput :: IO ()
+parseSizeInput = do
+    putStrLn "Define the paramaters: (an illegal input in any field will send you back upon completion)"
+    putStrLn "How many rows?"
+    x <- getLine
+    --parse to int, and double check its valid
+    putStrLn "How many columns?"
+    y <- getLine
+    --parse to int, and double check its valid
+    putStrLn "How many bombs?"
+    bombCount <- getLine
+    --parse to int, and double check its valid
+    let intX = read x
+    let intY = read y
+    let intCount = read bombCount
+    if intX > 1 && intY > 1 && intCount > 1
+      then presetConfirmation ("Confirm preset: " ++ show intX ++"x" ++ show intY ++", " ++ show intCount ++ " bombs" ++ ['\n'] ++"[y/N]?") [intX, intY, intCount] 
+    else
+      ioDificultyLoop "Invalid input"
+
+presetConfirmation :: String -> [Int] -> IO ()
+presetConfirmation message gamePreset = do
+  putStrLn message
+  response <- getLine
+  if response == "y" || response == "Y"
+    then ioLoopInitial gamePreset  "Give a position (eg. x y): "
+  else ioDificultyLoop ("Returning to difficulty selection..."++['\n'])
+  
+
+difficultySwitch :: String -> [Int]
+difficultySwitch difficulty
+  | difficulty == "1" = [9, 9, 10]
+  | difficulty == "2" = [16, 16, 40]
+  | difficulty == "3" = [16, 30, 99]
+  | otherwise = [9, 9, 10]
 
 --IOLoop() - (prints, waits, parses user input,)
     --continually waits for correct user input, once it exists, moves on to ioLoop
-ioLoopInitial :: String -> IO ()
-ioLoopInitial message = do
-    putStrLn (printField2D 0 0 getSize)
+ioLoopInitial :: [Int] -> String -> IO ()
+ioLoopInitial gamePreset message = do
+    putStrLn (printField2D 0 0 (gamePreset!!0) (gamePreset!!1))
     putStrLn message
 
     position <- getLine
 
     let input = parseInput position
     --create initial array
-    if ((length input == 3) && (input!!0)<getSize && (input!!1) < getSize) -- if valid input
+    if ((length input == 3) && (input!!0)<(gamePreset!!0) && (input!!1) < (gamePreset!!1)) -- if valid input
     then do
-        --let bombPositions = getBombPositions (input!!0) (input!!1) 10 []
+        --let bombPositions = getBombPositions (input!!0) (input!!1) (fieldPreset!!2) []
         let bombPositions = example9x9BombPositions
-        --ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): " --Old method
-        if(input!!2==2)
-            then ioLoop (scanInitial (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1)) "Give a position (eg. x y): "
-            else ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions getSize) getSize) (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): "
+        if(input!!2==2) --if user is digging
+            then ioLoop (scanInitial (proxLoop (initializeBombArray bombPositions (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y): "
+            else ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y): "
     else
-        ioLoopInitial "Invalid Input. Give a position (eg. x y): "--invalid input
+        ioLoopInitial gamePreset "Invalid Input. Give a position (eg. x y): "--invalid input
 
-
+--Used to get isolate the sizes from the game preset value
+getSizes :: [Int] -> [Int]
+getSizes array = 
+  [(array!!0),(array!!1)] --just return the x and y
 
 --TODO - DONE AFTER OTHERS (dependent on others other than Main, so subject to large change)
 --IOLoop() - (prints, waits, parses user input,)
@@ -54,11 +109,11 @@ ioLoopInitial message = do
     -- Check if updated array is valid
         -- If so, loop
         -- Otherwise, end condition
-ioLoop:: [[[Int]]] -> String -> IO ()
-ioLoop array message = do
+ioLoop:: [[[Int]]] -> [Int] -> String -> IO ()
+ioLoop array gamePreset message = do
     --putStrLn (show (length ((array!!0)!!0)))
     putStr ['\n','\n']
-    putStrLn (printField3D array 0 0 getSize)
+    putStrLn (printField3DInitial array (getSizes gamePreset))
     putStrLn message
 
     position <- getLine
@@ -66,17 +121,17 @@ ioLoop array message = do
     let input = parseInput position
 
     --create initial array
-    if validAction input array -- if valid input/action
+    if validAction input array gamePreset -- if valid input/action
     then
         if((input!!2 ==2 ) && getIsBomb (input!!0) (input!!1) array)
-            then putStrLn (concat [['\n','\n'],(printField3DComplete array 0 0 getSize), ['\n'], "Game Over"])
+            then putStrLn (concat [['\n','\n'],(printField3DCompleteInitial array (getSizes gamePreset)), ['\n'], "Game Over"])
         else if(input!!2==2)
-                then ioLoop (scanInitial array (input!!0) (input!!1)) "Give a position (eg. x y): "
-            else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) "Give a position (eg. x y): "
+                then ioLoop (scanInitial array (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y): "
+            else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y): "
 
     --should also check if any end-game characteristics have been met
     else
-        ioLoop array "Invalid Input. Give a position (eg. x y): "--invalid input
+        ioLoop array gamePreset "Invalid Input. Give a position (eg. x y): "--invalid input
 
 
 
@@ -84,9 +139,9 @@ ioLoop array message = do
     -- Verify
         -- Is the position actually within bounds? 
         -- Is the region available for more actions (not already dug)?
-validAction :: [Int] -> [[[Int]]] -> Bool
-validAction parsedInput field =
-    ((length parsedInput) == 3 && (parsedInput!!0) < getSize && (parsedInput!!1) < getSize) && ((getVisibilityDesignator (parsedInput!!0) (parsedInput!!1) field)/=2)
+validAction :: [Int] -> [[[Int]]] -> [Int] -> Bool
+validAction parsedInput field size =
+    ((length parsedInput) == 3 && (parsedInput!!0) < (size!!0) && (parsedInput!!1) < (size!!1)) && ((getVisibilityDesignator (parsedInput!!0) (parsedInput!!1) field)/=2)
 
 
 --parseInput() - take a string, parse it to an [x,y] coordinate pair, along with the action specifier (0 - unflag, 1 - flag, 2 - dig)
@@ -146,21 +201,21 @@ example9x9BombPositions = [[0,0],[1,8],[3,6],[5,8],[8,0],[1,5],[3,7],[5,0],[3,5]
             -- Otherwise, 0
         -- nextPosition
     -- Return the created array
-initializeBombArray :: [[Int]] -> Int -> [[Int]]
+initializeBombArray :: [[Int]] -> [Int] -> [[Int]]
 initializeBombArray bombPositions size =
-    bombLoopCol bombPositions 0 size
+    bombLoopCol bombPositions 0 (size!!0) (size!!1)
 
 --loop that builds rows returns ([[array!!y!!x, getProx array x y size] : nextElements array x+1 y size)] - returns 2d array of [isBomb, proximityCount, visibilityDesignator] pairs
-bombLoopRow :: [[Int]] -> Int -> Int -> Int -> [Int]
-bombLoopRow bombPositions x y size
-  | x == size-1 = if elem [x,y] bombPositions then [1] else [0]--base case, when done with a row, return the full row
-  | otherwise = if elem [x,y] bombPositions then 1 : bombLoopRow bombPositions (x+1) y size else 0 : bombLoopRow bombPositions (x+1) y size
+bombLoopRow :: [[Int]] -> Int -> Int -> Int ->[Int]
+bombLoopRow bombPositions x y sizeX
+  | x == sizeX-1 = if elem [x,y] bombPositions then [1] else [0]--base case, when done with a row, return the full row
+  | otherwise = if elem [x,y] bombPositions then 1 : bombLoopRow bombPositions (x+1) y sizeX else 0 : bombLoopRow bombPositions (x+1) y sizeX
 
 --loop that compiles rows [buildRow array x y size : compileRows array x y+1 size] - returns 3d array
-bombLoopCol :: [[Int]] -> Int -> Int -> [[Int]]
-bombLoopCol bombPositions y size
-  | y == size-1 = [bombLoopRow bombPositions 0 y size] --base case, when done with a row, return the full row
-  | otherwise = (bombLoopRow bombPositions 0 y size) : (bombLoopCol bombPositions (y+1) size)
+bombLoopCol :: [[Int]] -> Int -> Int -> Int -> [[Int]]
+bombLoopCol bombPositions y sizeX sizeY
+  | y == sizeY-1 = [bombLoopRow bombPositions 0 y sizeX] --base case, when done with a row, return the full row
+  | otherwise = (bombLoopRow bombPositions 0 y sizeX) : (bombLoopCol bombPositions (y+1) sizeX sizeY)
 
 
 
@@ -202,31 +257,31 @@ generatePair = [0,1];
 
 --takes the initial 2d bomb array, and the size (square)
 --returns a 3d array filled with cols, rows, [isBomb, proximity, visibilityDesignator]
-proxLoop :: [[Int]] -> Int -> [[[Int]]]
+proxLoop :: [[Int]] -> [Int] -> [[[Int]]]
 proxLoop array size =
-  proxLoopCol array 0 size
+  proxLoopCol array 0 (size!!0) (size!!1)
 
 
 --loop that builds rows returns ([[array!!y!!x, getProx array x y size] : nextElements array x+1 y size)] - returns 2d array of [isBomb, proximityCount, visibilityDesignator] pairs
-proxLoopRow :: [[Int]] -> Int -> Int -> Int -> [[Int]]
-proxLoopRow array x y size
-  | x == size-1 = [[((array!!y)!!x),(getProx array x y size), 0]] --base case, when done with a row, return the full row
-  | otherwise = [((array!!y)!!x),(getProx array x y size), 0] : (proxLoopRow array (x+1) y size)
+proxLoopRow :: [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+proxLoopRow array x y sizeX sizeY
+  | x == sizeX-1 = [[((array!!y)!!x),(getProx array x y sizeX sizeY), 0]] --base case, when done with a row, return the full row
+  | otherwise = [((array!!y)!!x),(getProx array x y sizeX sizeY), 0] : (proxLoopRow array (x+1) y sizeX sizeY)
 
 --loop that compiles rows [buildRow array x y size : compileRows array x y+1 size] - returns 3d array
-proxLoopCol :: [[Int]] -> Int -> Int -> [[[Int]]]
-proxLoopCol array y size
-  | y == size-1 = [proxLoopRow array 0 y size] --base case, when done with a row, return the full row
-  | otherwise = (proxLoopRow array 0 y size) : (proxLoopCol array (y+1) size)
+proxLoopCol :: [[Int]] -> Int -> Int -> Int -> [[[Int]]]
+proxLoopCol array y sizeX sizeY
+  | y == sizeY-1 = [proxLoopRow array 0 y sizeX sizeY] --base case, when done with a row, return the full row
+  | otherwise = (proxLoopRow array 0 y sizeX sizeY) : (proxLoopCol array (y+1) sizeX sizeY)
 
 
 --params = [[Isbomb]], row, col, sizeOfGrid
 --returns the number of bombs in proximity
-getProx :: [[Int]] -> Int -> Int -> Int -> Int
-getProx array x y size
-  | (y == 0 || y == size-1) = if (y==0) --if top
+getProx :: [[Int]] -> Int -> Int -> Int -> Int -> Int
+getProx array x y sizeX sizeY
+  | (y == 0 || y == sizeY-1) = if (y==0) --if top
                            then do
-                               if (x == 0 || x == size-1) --if its on either of the extremes x
+                               if (x == 0 || x == sizeX-1) --if its on either of the extremes x
                                then do
                                    if(x==0) -- if top left
                                        then ((array!!y)!!(x+1))+((array!!(y+1))!!(x+1))+((array!!(y+1))!!(x))
@@ -236,7 +291,7 @@ getProx array x y size
                                    ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y+1))!!(x+1))
                        else
                            do
-                               if (x == 0 || x == size-1) --if its on either of the extremes x
+                               if (x == 0 || x == sizeX-1) --if its on either of the extremes x
                                then do
                                    if(x==0) -- if bottom left
                                        then ((array!!y)!!(x+1))+((array!!(y-1))!!(x+1))+((array!!(y-1))!!(x))
@@ -244,7 +299,7 @@ getProx array x y size
                                        ((array!!y)!!(x-1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))
                                else --if its in the bottom middle
                                    ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))+((array!!(y-1))!!(x+1))
-  | (x == 0 || x == size-1) = do
+  | (x == 0 || x == sizeX-1) = do
         if(x==0) -- if left
             then ((array!!y)!!(x+1))+((array!!(y+1))!!(x+1))+((array!!(y+1))!!(x))+((array!!(y-1))!!(x+1))+((array!!(y-1))!!(x))
         else --if right
@@ -260,16 +315,21 @@ getProx array x y size
 -- Array IO Helper functions
 -- ================================== --
 
---Prints the UI spread for the user's intial choice (DOES NOT CREATE A FIELD)
-printField2D :: Int -> Int -> Int -> String
-printField2D x y size
-  | x == 0 && y/= size+1 = concat [getCoordinateY y, " ", printField2D (x+1) (y) size]
-  | x == size && y==0 = concat [getCoordinateX x, ['\n'], printField2D 0 (y+1) size]
-  | x == size && y/=0 && y/=size+1 = concat ["?", ['\n'], printField2D 0 (y+1) size]
 
-  | y == 0 && x/=size = concat [getCoordinateX x, " ", printField2D (x+1) y size]
-  | y==size+1 = ""
-  | otherwise = concat ["?", " ", printField2D (x+1) y size]
+--Prints the UI spread for the user's intial choice (DOES NOT CREATE A FIELD)
+printField2DInitial :: [Int] -> String
+printField2DInitial size = printField2D 0 0 (size!!0) (size!!1)
+
+--Prints the UI spread for the user's intial choice (DOES NOT CREATE A FIELD)
+printField2D :: Int -> Int -> Int -> Int -> String
+printField2D x y sizeX sizeY
+  | x == 0 && y/= sizeY+1 = concat [getCoordinateY y, " ", printField2D (x+1) (y) sizeX sizeY]
+  | x == sizeX && y==0 = concat [getCoordinateX x, ['\n'], printField2D 0 (y+1) sizeX sizeY]
+  | x == sizeX && y/=0 && y/=sizeY+1 = concat ["?", ['\n'], printField2D 0 (y+1) sizeX sizeY]
+
+  | y == 0 && x/=sizeX = concat [getCoordinateX x, " ", printField2D (x+1) y sizeX sizeY]
+  | y==sizeY+1 = ""
+  | otherwise = concat ["?", " ", printField2D (x+1) y sizeX sizeY]
 
 --Hardcoded arrays - Allows for quick indexing and creation of the UI Coordinates
 getCoordinateX :: Int -> String
@@ -288,16 +348,21 @@ getPrintableCharacter array
   | otherwise = show (array!!1) -- where m is the index for the proximity count, because it would be visibile if it were a bomb
 
 
--- creates a singular formated string from the completed 3d array
-printField3D :: [[[Int]]] -> Int -> Int -> Int -> String
-printField3D array x y size
-  | x == 0 && y/= size+1 = concat [getCoordinateY y, " ", printField3D array (x+1) y size]
-  | x == size && y==0 = concat [getCoordinateX x, ['\n'], printField3D array 0 (y+1) size]
-  | x == size && y/=0 && y/=size+1 = concat [getPrintableCharacter ((array!!(y-1))!!(x-1)), ['\n'], printField3D array 0 (y+1) size]
 
-  | y == 0 && x/=size = concat [getCoordinateX x, " ", printField3D array (x+1) y size]
-  | y==size+1 = ""
-  | otherwise = concat [getPrintableCharacter ((array!!(y-1))!!(x-1)), " ", printField3D array (x+1) y size]
+printField3DInitial :: [[[Int]]] -> [Int] -> String
+printField3DInitial array sizes = printField3D array 0 0 (sizes!!0) (sizes!!1)
+
+
+-- creates a singular formated string from the completed 3d array
+printField3D :: [[[Int]]] -> Int -> Int -> Int -> Int -> String
+printField3D array x y sizeX sizeY
+  | x == 0 && y/=sizeY+1 = concat [getCoordinateY y, " ", printField3D array (x+1) y sizeX sizeY]
+  | x == sizeX && y==0 = concat [getCoordinateX x, ['\n'], printField3D array 0 (y+1) sizeX sizeY]
+  | x == sizeX && y/=0 && y/=sizeY+1 = concat [getPrintableCharacter ((array!!(y-1))!!(x-1)), ['\n'], printField3D array 0 (y+1) sizeX sizeY]
+
+  | y == 0 && x/=sizeX = concat [getCoordinateX x, " ", printField3D array (x+1) y sizeX sizeY]
+  | y==sizeY+1 = ""
+  | otherwise = concat [getPrintableCharacter ((array!!(y-1))!!(x-1)), " ", printField3D array (x+1) y sizeX sizeY]
 
 
  --v-v-v- END GAME -v-v-v-v-
@@ -309,16 +374,21 @@ getPrintableCharacterEnd array
   | otherwise = "B" -- if it is a bomb, print B
 
 
---call when the game is over (creates a single formated string with full visibility)
-printField3DComplete :: [[[Int]]] -> Int -> Int -> Int -> String
-printField3DComplete array x y size
-  | x == 0 && y/= size+1 = concat [getCoordinateY y, " ", printField3DComplete array (x+1) y size]
-  | x == size && y==0 = concat [getCoordinateX x, ['\n'], printField3DComplete array 0 (y+1) size]
-  | x == size && y/=0 && y/=size+1 = concat [getPrintableCharacterEnd ((array!!(y-1))!!(x-1)), ['\n'], printField3DComplete array 0 (y+1) size]
 
-  | y == 0 && x/=size = concat [getCoordinateX x, " ", printField3DComplete array (x+1) y size]
-  | y==size+1 = ""
-  | otherwise = concat [getPrintableCharacterEnd ((array!!(y-1))!!(x-1)), " ", printField3DComplete array (x+1) y size]
+--call when the game is over (creates a single formated string with full visibility)
+printField3DCompleteInitial :: [[[Int]]] -> [Int] -> String
+printField3DCompleteInitial array sizes = printField3DComplete array 0 0 (sizes!!0) (sizes!!1)
+
+--call when the game is over (creates a single formated string with full visibility)
+printField3DComplete :: [[[Int]]] -> Int -> Int -> Int -> Int -> String
+printField3DComplete array x y sizeX sizeY
+  | x == 0 && y/= sizeY+1 = concat [getCoordinateY y, " ", printField3DComplete array (x+1) y sizeX sizeY]
+  | x == sizeX && y==0 = concat [getCoordinateX x, ['\n'], printField3DComplete array 0 (y+1) sizeX sizeY]
+  | x == sizeX && y/=0 && y/=sizeY+1 = concat [getPrintableCharacterEnd ((array!!(y-1))!!(x-1)), ['\n'], printField3DComplete array 0 (y+1) sizeX sizeY]
+
+  | y == 0 && x/=sizeX = concat [getCoordinateX x, " ", printField3DComplete array (x+1) y sizeX sizeY]
+  | y==sizeY+1 = ""
+  | otherwise = concat [getPrintableCharacterEnd ((array!!(y-1))!!(x-1)), " ", printField3DComplete array (x+1) y sizeX sizeY]
 
 
 -- ============================================
@@ -391,8 +461,8 @@ getPoints field x y xSize ySize
   | otherwise = if getVisibilityDesignator x y field == 2 then 1 + getPoints field (x+1) y xSize ySize else 0 + getPoints field (x+1) y xSize ySize
 
 isVictory :: [[[Int]]] -> Int -> Int -> Int -> Int -> Int -> Bool
-isVictory field x y xSize ySize bombCount =
-    ((xSize*ySize)-bombCount) == getPoints field 0 0 xSize ySize
+isVictory field x y sizeX sizeY bombCount =
+    ((sizeX*sizeY)-bombCount) == getPoints field 0 0 sizeX sizeY
 -- ============================================
 
 
@@ -401,8 +471,8 @@ isVictory field x y xSize ySize bombCount =
 -- Scanning Functions (reveal area)
 -- ================================== --
 
-scanInitial :: [[[Int]]] -> Int -> Int -> [[[Int]]]
-scanInitial field x y = scanUpdateLoop field (scanShouldVisible field [] x y)
+scanInitial :: [[[Int]]] -> Int -> Int -> [Int] -> [[[Int]]]
+scanInitial field x y size = scanUpdateLoop field (scanShouldVisible field [] x y (size!!0) (size!!1))
 
 scanUpdateLoop :: [[[Int]]] -> [[Int]] -> [[[Int]]]
 scanUpdateLoop field (position:rest) =
@@ -415,26 +485,26 @@ scanUpdateLoop field (position:rest) =
     --base case = [] empty array when the position should not be made visible (if it has already been made visible)
     --second base case = [x,y] when the position has a prox > 0
     --recursive loop = [x,y] : recursion of each position (L,TL,T,TR,R,BR,B,BL)
-scanShouldVisible :: [[[Int]]] -> [[Int]] ->Int -> Int -> [[Int]]
-scanShouldVisible field positions x y
+scanShouldVisible :: [[[Int]]] -> [[Int]] ->Int -> Int -> Int -> Int -> [[Int]]
+scanShouldVisible field positions x y sizeX sizeY
   | getVisibilityDesignator x y field == 2 = positions
   | elem [x,y] positions = positions
   | getProximity x y field > 0 = [x,y]:positions
-  | otherwise = scanSurrounding field positions x y 9 9
+  | otherwise = scanSurrounding field positions x y sizeX sizeY
 
 --goes through each possible condtion to ensure no indexing errors
 scanSurrounding :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
 scanSurrounding field positions x y xSize ySize
   | elem [x,y] positions = positions                         --if already contains, return
-  | x == xSize-1 && y==0 = scanSurroundingTR field ([x,y]:positions) x y        --top right - scan L,LB,B
-  | x == 0 && y==0 = scanSurroundingTL field ([x,y]:positions) x y              --top left - scan R,RB,B
-  | y == 0 = scanSurroundingT field ([x,y]:positions) x y                       --top middle - scan L,LB,B,RB,R
-  | x == xSize-1 && y==ySize-1 = scanSurroundingBR field ([x,y]:positions) x y  --bottom right - scan T,TL,L
-  | x == 0 && y==ySize-1 = scanSurroundingBL field ([x,y]:positions) x y        --bottom left - scan T,TR,R
-  | y==ySize-1 = scanSurroundingB field ([x,y]:positions) x y                   --bottom middle - scan L,TL,T,TR,R
-  | x == 0 = scanSurroundingL field ([x,y]:positions) x y                       --left - scan T,TR,R,BR,B
-  | x == xSize-1 = scanSurroundingR field ([x,y]:positions) x y                 --right - scan T,TL,L,BL,B
-  | otherwise = scanSurroundingM field ([x,y]:positions) x y                    --middle/center - scan T,TR,R,BR,B,BL,L,TL
+  | x == xSize-1 && y==0 = scanSurroundingTR field ([x,y]:positions) x y xSize ySize       --top right - scan L,LB,B
+  | x == 0 && y==0 = scanSurroundingTL field ([x,y]:positions) x y xSize ySize              --top left - scan R,RB,B
+  | y == 0 = scanSurroundingT field ([x,y]:positions) x y xSize ySize                       --top middle - scan L,LB,B,RB,R
+  | x == xSize-1 && y==ySize-1 = scanSurroundingBR field ([x,y]:positions) x y xSize ySize  --bottom right - scan T,TL,L
+  | x == 0 && y==ySize-1 = scanSurroundingBL field ([x,y]:positions) x y xSize ySize        --bottom left - scan T,TR,R
+  | y==ySize-1 = scanSurroundingB field ([x,y]:positions) x y xSize ySize                   --bottom middle - scan L,TL,T,TR,R
+  | x == 0 = scanSurroundingL field ([x,y]:positions) x y xSize ySize                       --left - scan T,TR,R,BR,B
+  | x == xSize-1 = scanSurroundingR field ([x,y]:positions) x y xSize ySize                 --right - scan T,TL,L,BL,B
+  | otherwise = scanSurroundingM field ([x,y]:positions) x y xSize ySize                    --middle/center - scan T,TR,R,BR,B,BL,L,TL
 
 
 --Key for Future area debugging
@@ -448,45 +518,45 @@ scanSurrounding field positions x y xSize ySize
     -- (scanShouldVisible field positions (x+1) (y-1))     --TR
 
 
-scanSurroundingM :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
-scanSurroundingM field positions x y =
-    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1)) x (y-1))  (x-1) (y-1))  (x-1) y) (x-1) (y+1)) x (y+1)) (x+1) (y+1)) (x+1) y)
+scanSurroundingM :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+scanSurroundingM field positions x y xSize ySize =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1) xSize ySize) x (y-1)  xSize ySize)  (x-1) (y-1)  xSize ySize)  (x-1) y xSize ySize) (x-1) (y+1) xSize ySize) x (y+1) xSize ySize) (x+1) (y+1) xSize ySize) (x+1) y xSize ySize)
 
-scanSurroundingTR :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
-scanSurroundingTR field positions x y =
-    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x-1) y)  (x-1) (y+1))  x (y+1))
+scanSurroundingTR :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+scanSurroundingTR field positions x y xSize ySize =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x-1) y xSize ySize)  (x-1) (y+1) xSize ySize)  x (y+1) xSize ySize)
 
-scanSurroundingTL :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
-scanSurroundingTL field positions x y =
-    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions x (y+1)) (x+1) (y+1)) (x+1) y)
-
-
-scanSurroundingL :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
-scanSurroundingL field positions x y =
-    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1)) x (y-1)) x (y+1)) (x+1) (y+1)) (x+1) y)
+scanSurroundingTL :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+scanSurroundingTL field positions x y xSize ySize =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions x (y+1) xSize ySize) (x+1) (y+1) xSize ySize) (x+1) y xSize ySize)
 
 
-scanSurroundingR :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
-scanSurroundingR field positions x y =
-    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions x (y-1)) (x-1) (y-1)) (x-1) y) (x-1) (y+1)) x (y+1))
-
-scanSurroundingB :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
-scanSurroundingB field positions x y =
-   (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1)) x (y-1)) (x-1) (y-1)) (x-1) y) (x+1) y)
+scanSurroundingL :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+scanSurroundingL field positions x y xSize ySize =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1) xSize ySize) x (y-1) xSize ySize) x (y+1) xSize ySize) (x+1) (y+1) xSize ySize) (x+1) y xSize ySize)
 
 
-scanSurroundingBL :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
-scanSurroundingBL field positions x y =
-    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1)) x (y-1)) (x+1) y)
+scanSurroundingR :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+scanSurroundingR field positions x y xSize ySize =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions x (y-1) xSize ySize) (x-1) (y-1) xSize ySize) (x-1) y xSize ySize) (x-1) (y+1) xSize ySize) x (y+1) xSize ySize)
 
-scanSurroundingBR :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
-scanSurroundingBR field positions x y =
-    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions x (y-1)) (x-1) (y-1)) (x-1) y)
+scanSurroundingB :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+scanSurroundingB field positions x y xSize ySize =
+   (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1) xSize ySize) x (y-1) xSize ySize) (x-1) (y-1) xSize ySize) (x-1) y xSize ySize) (x+1) y xSize ySize)
 
 
-scanSurroundingT :: [[[Int]]] -> [[Int]] -> Int -> Int -> [[Int]]
-scanSurroundingT field positions x y =
-    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x-1) y) (x-1) (y+1)) x (y+1)) (x+1) (y+1)) (x+1) y)
+scanSurroundingBL :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+scanSurroundingBL field positions x y xSize ySize =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x+1) (y-1) xSize ySize) x (y-1) xSize ySize) (x+1) y xSize ySize)
+
+scanSurroundingBR :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+scanSurroundingBR field positions x y xSize ySize =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions x (y-1) xSize ySize) (x-1) (y-1) xSize ySize) (x-1) y xSize ySize)
+
+
+scanSurroundingT :: [[[Int]]] -> [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
+scanSurroundingT field positions x y xSize ySize =
+    (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field (scanShouldVisible field positions (x-1) y xSize ySize) (x-1) (y+1) xSize ySize) x (y+1) xSize ySize) (x+1) (y+1) xSize ySize) (x+1) y xSize ySize)
 
 
 -- ============================================
