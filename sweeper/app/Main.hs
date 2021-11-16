@@ -166,10 +166,7 @@ parseInput input = do
                 [(findIndices (==(l!!0)) rowKeyArray)!!0, (findIndices (==(l!!1)) colKeyArray)!!0, (findIndices (==(l!!2)) actionKeyArray)!!0]
             else []
     else
-        if (elem (l!!0) rowKeyArray && elem (l!!1) colKeyArray)
-            then [(findIndices (==(l!!0)) rowKeyArray)!!0, (findIndices (==(l!!1)) colKeyArray)!!0, 0]  -- if no action provided, asume unflag (least destructive)
-        else
-            []
+        [] --Not following correct convention for input
 
 
 --in expert mode, there are only (at max 16 rows, so we start there)
