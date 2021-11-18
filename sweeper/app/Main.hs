@@ -41,23 +41,23 @@ ioDificultyLoop message = do
       then parseSizeInput
   else ioLoopInitial (difficultySwitch input) "Give a position (eg. x y): "
 
---TODO
+--TODO - read the inputs to make sure they are valid BEFORE trying to read
 parseSizeInput :: IO ()
 parseSizeInput = do
     putStrLn "Define the paramaters: (an illegal input in any field will send you back upon completion)"
-    putStrLn "How many rows?"
+    putStrLn "How many rows (1-30)? "
     x <- getLine
     --parse to int, and double check its valid
-    putStrLn "How many columns?"
+    putStrLn "How many columns (1-16)?  "
     y <- getLine
     --parse to int, and double check its valid
-    putStrLn "How many bombs?"
+    putStrLn "How many bombs (Positive number smaller than size of field)? "
     bombCount <- getLine
     --parse to int, and double check its valid
     let intX = read x
     let intY = read y
     let intCount = read bombCount
-    if intX > 1 && intY > 1 && intCount > 1
+    if intX > 1 && intY > 1 && intCount > 1 && intX <= 30 && intY <= 16 && (intCount < (intX*intY))
       then presetConfirmation ("Confirm preset: " ++ show intX ++"x" ++ show intY ++", " ++ show intCount ++ " bombs" ++ ['\n'] ++"[y/N]?") [intX, intY, intCount] 
     else
       ioDificultyLoop "Invalid input"
@@ -75,7 +75,7 @@ difficultySwitch :: String -> [Int]
 difficultySwitch difficulty
   | difficulty == "1" = [9, 9, 10]
   | difficulty == "2" = [16, 16, 40]
-  | difficulty == "3" = [16, 30, 99]
+  | difficulty == "3" = [30, 16, 99]
   | otherwise = [9, 9, 10]
 
 --IOLoop() - (prints, waits, parses user input,)
