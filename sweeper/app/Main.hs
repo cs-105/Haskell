@@ -5,6 +5,7 @@ module Main where
 import System.Random
 
 import Data.List (findIndices)
+import Data.Bool (Bool (False))
 -- =================================== --
 -- CONST Testing
 -- ================================== --
@@ -41,7 +42,7 @@ ioDificultyLoop message = do
       then parseSizeInput
   else ioLoopInitial (difficultySwitch input) "Give a position (eg. x y): "
 
---TODO - read the inputs to make sure they are valid BEFORE trying to read
+--TODO - read the inputs to make sure they are valid BEFORE trying to read (can use parseIsInt)
 parseSizeInput :: IO ()
 parseSizeInput = do
     putStrLn "Define the paramaters: (an illegal input in any field will send you back upon completion)"
@@ -58,9 +59,18 @@ parseSizeInput = do
     let intY = read y
     let intCount = read bombCount
     if intX > 1 && intY > 1 && intCount > 1 && intX <= 30 && intY <= 16 && (intCount < (intX*intY))
-      then presetConfirmation ("Confirm preset: " ++ show intX ++"x" ++ show intY ++", " ++ show intCount ++ " bombs" ++ ['\n'] ++"[y/N]?") [intX, intY, intCount] 
+      then presetConfirmation ("Confirm preset: " ++ show intX ++"x" ++ show intY ++", " ++ show intCount ++ " bombs" ++ ['\n'] ++"[y/N]?") [intX, intY, intCount]
     else
       ioDificultyLoop "Invalid input"
+
+--iterate over a string and determine whether it is actually a number
+parseIsInt:: String -> Bool
+parseIsInt [] = True
+parseIsInt (letter:rest) =
+  elem letter digits && parseIsInt rest
+
+digits:: [Char]
+digits = ['1','2','3','4','5','6','7','8','9','0']
 
 presetConfirmation :: String -> [Int] -> IO ()
 presetConfirmation message gamePreset = do
@@ -69,7 +79,7 @@ presetConfirmation message gamePreset = do
   if response == "y" || response == "Y"
     then ioLoopInitial gamePreset  "Give a position (eg. x y): "
   else ioDificultyLoop ("Returning to difficulty selection..."++['\n'])
-  
+
 
 difficultySwitch :: String -> [Int]
 difficultySwitch difficulty
@@ -101,7 +111,7 @@ ioLoopInitial gamePreset message = do
 
 --Used to get isolate the sizes from the game preset value
 getSizes :: [Int] -> [Int]
-getSizes array = 
+getSizes array =
   [(array!!0),(array!!1)] --just return the x and y
 
 --TODO - DONE AFTER OTHERS (dependent on others other than Main, so subject to large change)
