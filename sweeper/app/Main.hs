@@ -5,7 +5,6 @@ module Main where
 import System.Random
 
 import Data.List (findIndices)
-import Data.Bool (Bool (False))
 -- =================================== --
 -- CONST Testing
 -- ================================== --
