@@ -41,26 +41,35 @@ ioDificultyLoop message = do
       then parseSizeInput
   else ioLoopInitial (difficultySwitch input) "Give a position (eg. x y): "
 
---TODO
+--TODO - read the inputs to make sure they are valid BEFORE trying to read (can use parseIsInt)
 parseSizeInput :: IO ()
 parseSizeInput = do
     putStrLn "Define the paramaters: (an illegal input in any field will send you back upon completion)"
-    putStrLn "How many rows?"
+    putStrLn "How many rows (1-30)? "
     x <- getLine
     --parse to int, and double check its valid
-    putStrLn "How many columns?"
+    putStrLn "How many columns (1-16)?  "
     y <- getLine
     --parse to int, and double check its valid
-    putStrLn "How many bombs?"
+    putStrLn "How many bombs (Positive number smaller than size of field)? "
     bombCount <- getLine
     --parse to int, and double check its valid
     let intX = read x
     let intY = read y
     let intCount = read bombCount
-    if intX > 1 && intY > 1 && intCount > 1
-      then presetConfirmation ("Confirm preset: " ++ show intX ++"x" ++ show intY ++", " ++ show intCount ++ " bombs" ++ ['\n'] ++"[y/N]?") [intX, intY, intCount] 
+    if intX > 1 && intY > 1 && intCount > 1 && intX <= 30 && intY <= 16 && (intCount < (intX*intY))
+      then presetConfirmation ("Confirm preset: " ++ show intX ++"x" ++ show intY ++", " ++ show intCount ++ " bombs" ++ ['\n'] ++"[y/N]?") [intX, intY, intCount]
     else
       ioDificultyLoop "Invalid input"
+
+--iterate over a string and determine whether it is actually a number
+parseIsInt:: String -> Bool
+parseIsInt [] = True
+parseIsInt (letter:rest) =
+  elem letter digits && parseIsInt rest
+
+digits:: [Char]
+digits = ['1','2','3','4','5','6','7','8','9','0']
 
 presetConfirmation :: String -> [Int] -> IO ()
 presetConfirmation message gamePreset = do
@@ -69,13 +78,13 @@ presetConfirmation message gamePreset = do
   if response == "y" || response == "Y"
     then ioLoopInitial gamePreset  "Give a position (eg. x y): "
   else ioDificultyLoop ("Returning to difficulty selection..."++['\n'])
-  
+
 
 difficultySwitch :: String -> [Int]
 difficultySwitch difficulty
   | difficulty == "1" = [9, 9, 10]
   | difficulty == "2" = [16, 16, 40]
-  | difficulty == "3" = [16, 30, 99]
+  | difficulty == "3" = [30, 16, 99]
   | otherwise = [9, 9, 10]
 
 --IOLoop() - (prints, waits, parses user input,)
@@ -101,7 +110,7 @@ ioLoopInitial gamePreset message = do
 
 --Used to get isolate the sizes from the game preset value
 getSizes :: [Int] -> [Int]
-getSizes array = 
+getSizes array =
   [(array!!0),(array!!1)] --just return the x and y
 
 --TODO - DONE AFTER OTHERS (dependent on others other than Main, so subject to large change)
