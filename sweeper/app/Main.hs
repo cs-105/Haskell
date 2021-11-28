@@ -23,7 +23,6 @@ import Data.List (findIndices)
 --Main() - calls initial minesweeper builder and looper
 main :: IO ()
 main = do
-    --ioLoopInitial [9,9,10] "Give a position (eg. x y): "
     ioDificultyLoop ""
 
 --ioDificultyLoop() - (prints, waits, parses user input,)
@@ -39,7 +38,7 @@ ioDificultyLoop message = do
   let input = ((words response) !! 0)
   if input == "4" || input == "Custom"
       then parseSizeInput
-  else ioLoopInitial (difficultySwitch input) "Give a position (eg. x y): "
+  else ioLoopInitial (difficultySwitch input) "Give a position (eg. x y flag): "
 
 --TODO - read the inputs to make sure they are valid BEFORE trying to read (can use parseIsInt)
 parseSizeInput :: IO ()
@@ -76,7 +75,7 @@ presetConfirmation message gamePreset = do
   putStrLn message
   response <- getLine
   if response == "y" || response == "Y"
-    then ioLoopInitial gamePreset  "Give a position (eg. x y): "
+    then ioLoopInitial gamePreset  "Give a position ('A a') followed by an action: ('flag', 'dig', 'unflag'): "
   else ioDificultyLoop ("Returning to difficulty selection..."++['\n'])
 
 
@@ -103,10 +102,10 @@ ioLoopInitial gamePreset message = do
         --let bombPositions = getBombPositions (input!!0) (input!!1) (fieldPreset!!2) []
         let bombPositions = example9x9BombPositions
         if(input!!2==2) --if user is digging
-            then ioLoop (scanInitial (proxLoop (initializeBombArray bombPositions (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y): "
-            else ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y): "
+            then ioLoop (scanInitial (proxLoop (initializeBombArray bombPositions (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y flag): "
+            else ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y flag): "
     else
-        ioLoopInitial gamePreset "Invalid Input. Give a position (eg. x y): "--invalid input
+        ioLoopInitial gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ") --invalid input
 
 --Used to get isolate the sizes from the game preset value
 getSizes :: [Int] -> [Int]
@@ -141,12 +140,12 @@ ioLoop array gamePreset message = do
         if((input!!2 ==2 ) && getIsBomb (input!!0) (input!!1) array)
             then putStrLn (concat [['\n','\n'],(printField3DCompleteInitial array (getSizes gamePreset)), ['\n'], "Game Over"])
         else if(input!!2==2)
-                then ioLoop (scanInitial array (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y): "
-            else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y): "
+                then ioLoop (scanInitial array (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y flag): "
+            else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y flag): "
 
     --should also check if any end-game characteristics have been met
     else
-        ioLoop array gamePreset "Invalid Input. Give a position (eg. x y): "--invalid input
+        ioLoop array gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ")--invalid input
 
 
 
@@ -378,6 +377,36 @@ printField3D array x y sizeX sizeY
 
 
  --v-v-v- END GAME -v-v-v-v-
+
+
+-- =================================== --
+-- Accumulation of current game data (flags, invisible spaces)
+currentGameData :: [[[Int]]] -> [Int]
+currentGameData (row:restOfArray) =
+  if null restOfArray
+    then currentGameDataRow row
+  else do
+    let value = currentGameDataRow row
+    let otherValue = currentGameData restOfArray
+    [(value!!0)+(otherValue!!0),(value!!1)+(otherValue!!1)]
+
+currentGameDataRow :: [[Int]] -> [Int]
+currentGameDataRow [] = [0,0]
+currentGameDataRow (element:restOfRow) =
+  if null restOfRow
+    then currentGameDataPosition element
+  else do
+    let value = currentGameDataPosition element
+    let otherValue = currentGameDataRow restOfRow
+    [(value!!0)+(otherValue!!0),(value!!1)+(otherValue!!1)]
+
+currentGameDataPosition :: [Int] -> [Int]
+currentGameDataPosition positionValues 
+  | (positionValues!!2) == 0 = [1,0]  --0 is 'unknown', 1 is 'flag', 2 is 'dug'
+  | (positionValues!!2) == 1 = [0,1]     
+  | otherwise = [0,0]
+-- ============================================
+
 
 --at the end of the game there are only 2 visible options (bomb or proximity count)
 getPrintableCharacterEnd :: [Int] -> String
