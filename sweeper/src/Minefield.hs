@@ -1,5 +1,4 @@
 module Minefield (generateMinefield) where
-import GhcPrelude (Enum)
 import Data.List (permutations)
 
 import System.Random ()

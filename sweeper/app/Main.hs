@@ -6,6 +6,7 @@ import System.Random
 
 import Data.List (findIndices)
 import Data.String (String)
+import Minefield
 -- =================================== --
 -- CONST Testing
 -- ================================== --
@@ -24,7 +25,8 @@ import Data.String (String)
 --Main() - calls initial minesweeper builder and looper
 main :: IO ()
 main = do
-    ioDificultyLoop ""
+    generateMinefield
+    --ioDificultyLoop ""
 
 --ioDificultyLoop() - (prints, waits, parses user input,)
 --continually waits for correct user input, once it exists, moves on to ioLoopInitial (which waits for correct position input)
