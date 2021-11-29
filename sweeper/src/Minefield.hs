@@ -4,6 +4,8 @@ import Data.List (permutations)
 
 import System.Random ()
 
+--This module is intended to be a generator for the Minefield, but the contents may be
+--moved directly to app/Main.hs
 
 generateMinefield :: IO ()
 generateMinefield = putStrLn "Please input a seed (positive integer):  "
