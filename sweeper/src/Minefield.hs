@@ -5,26 +5,28 @@ import Data.List (permutations)
 import System.Random ()
 
 
+generateMinefield :: IO ()
+generateMinefield = putStrLn "Please input a seed (positive integer):  "
 
-generateMinefield :: (Num a, Enum a) => a -> a -> Int -> Int -> IO [[a]]
-generateMinefield xSize ySize bombs seed = do
-    putStrLn "Please input a seed (positive integer):  "
-    y <- getLine
-    let intY = read y
-    safeGenerateMinefield xSize ySize bombs 5
+-- generateMinefield :: (Num a, Enum a) => a -> a -> Int -> Int -> IO [[a]]
+-- generateMinefield xSize ySize bombs seed = do
+--     putStrLn "Please input a seed (positive integer):  "
+--     y <- getLine
+--     let intY = read y
+--     safeGenerateMinefield xSize ySize bombs 5
 
-safeGenerateMinefield :: (Num a, Enum a) => a -> a -> Int -> Int -> [[a]]
+safeGenerateMinefield :: Int -> Int -> Int -> Int -> [[Int]]
 safeGenerateMinefield xSize ySize bombs seed = nBombsFromPool (shuffleBombs (allLocations xSize ySize) seed) bombs
 
-allLocations :: (Num a, Enum a) => a -> a -> [[a]]
+allLocations :: Int -> Int -> [[Int]]
 allLocations xSize ySize = [[x,y] | x <- [0..xSize-1], y <- [0..ySize-1]]
 
-nBombsFromPool :: (Num a, Enum a) => [[a]] -> Int -> [[a]]
+nBombsFromPool :: [[Int]] -> Int -> [[Int]]
 nBombsFromPool potentialBombs n
     | n <= 1    = [head potentialBombs]
     | otherwise = [head potentialBombs] ++ (nBombsFromPool (tail potentialBombs) (n - 1))
 
-shuffleBombs :: (Num a, Enum a) => [[a]] -> Int -> [[a]]
+shuffleBombs :: [[Int]] -> Int -> [[Int]]
 shuffleBombs bombPool seed = permutations bombPool !! seed
     -- do
     --     putStrLn "Please input a seed (positive integer):  "
