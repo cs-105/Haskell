@@ -25,9 +25,11 @@ isValidFieldLoop:: [[Int]] -> [[Int]] -> Bool
 isValidFieldLoop fieldProximities (bomb:otherBombs) = do
     let tempField = decrementNeighbors fieldProximities (bomb!!0) (bomb!!1)
     (tempField /= []) && isValidFieldLoop tempField otherBombs
-isValidFieldLoop fieldProximities [] =
-    isAllZeros fieldProximities
+isValidFieldLoop fieldProximities [] = isAllZeros fieldProximities --when all the bombs have been decremented
 
+-- ==========================
+-- decrement
+-- =================
 decrementNeighbors :: [[Int]] -> Int -> Int -> [[Int]]
 decrementNeighbors field x y
   | x == (length (field!!0))-1 && y==0 = updateDecrement (updateDecrement field [(x-1)] y)  [(x-1),x] (y-1)                         --top right - scan L,LB,B
@@ -40,9 +42,6 @@ decrementNeighbors field x y
   | x == (length (field!!0))-1 = updateDecrement (updateDecrement (updateDecrement field [(x-1)] y)  [(x-1),x] (y+1)) [(x-1),x] (y-1)   --right - scan T,TL,L,BL,B
   | otherwise = updateDecrement (updateDecrement (updateDecrement field [(x-1),(x+1)] y)  [(x-1),x,(x+1)] (y+1)) [(x-1),x,(x+1)] (y-1)                    --middle/center - scan T,TR,R,BR,B,BL,L,TL
 
--- ==========================
--- decrement
--- =================
 --takes the current game array, and an array of all the xvalues to be changed in the given row, returns an empty array if the field becomes invalid (prox's under 0)
 updateDecrement :: [[Int]] -> [Int] -> Int -> [[Int]]
 updateDecrement array xPositions y =
@@ -99,7 +98,7 @@ isZerosRow (element:restOfRow) =
 
 isZero :: Int -> Bool
 isZero positionValues =
-  positionValues == 0
+  positionValues == 0 ||  positionValues < (-9) -- the decrement should never get to -9, so if it does, we know to discard it from the pool (its unknown or flagged)
 
 
 -- =================================== --
@@ -126,5 +125,5 @@ getVisibleValue :: [Int] -> Int
 getVisibleValue positionValues =
   if (positionValues!!2) == 2
       then positionValues!!1 --if dug (visible), return prox
-      else (-1)-(positionValues!!2)  --if its unknown, it'll be -1, flag will be -2
+      else (-10)-(positionValues!!2)  --if its unknown, it'll be -10, flag will be -11
 -- ============================================
