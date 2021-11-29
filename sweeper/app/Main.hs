@@ -5,6 +5,7 @@ module Main where
 import System.Random
 
 import Data.List (findIndices)
+import Data.String (String)
 -- =================================== --
 -- CONST Testing
 -- ================================== --
@@ -56,7 +57,7 @@ parseSizeInput = do
     let intX = read x
     let intY = read y
     let intCount = read bombCount
-    if intX > 1 && intY > 1 && intCount > 1 && intX <= 30 && intY <= 16 && (intCount < (intX*intY))
+    if intX > 1 && intY > 1 && intCount >= 1 && intX <= 30 && intY <= 16 && (intCount < (intX*intY))
       then presetConfirmation ("Confirm preset: " ++ show intX ++"x" ++ show intY ++", " ++ show intCount ++ " bombs" ++ ['\n'] ++"[y/N]?") [intX, intY, intCount]
     else
       ioDificultyLoop "Invalid input"
@@ -128,26 +129,35 @@ ioLoop array gamePreset message = do
     --putStrLn (show (length ((array!!0)!!0)))
     putStr ['\n','\n']
     putStrLn (printField3DInitial array (getSizes gamePreset))
-    putStrLn message
+    let gameStatus = currentGameData array --gameStatus!!0 is unknown count, gameStatus!!1 is flags count
+    putStrLn (progressMessage gameStatus gamePreset)
+    if ((gameStatus!!0 - gamePreset!!2) == 0)
+      then putStrLn (['\n','\t']++"You Win")
+    else do
+      putStrLn message
 
-    position <- getLine
+      position <- getLine
 
-    let input = parseInput position
+      let input = parseInput position
 
-    --create initial array
-    if validAction input array gamePreset -- if valid input/action
-    then
-        if((input!!2 ==2 ) && getIsBomb (input!!0) (input!!1) array)
-            then putStrLn (concat [['\n','\n'],(printField3DCompleteInitial array (getSizes gamePreset)), ['\n'], "Game Over"])
-        else if(input!!2==2)
-                then ioLoop (scanInitial array (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y flag): "
-            else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y flag): "
+      --win condition = (unknown count - bomb count), when reach 1 and digging not a bomb, game must be ending, flag count is just for help, bombCount is gamePreset!!
 
-    --should also check if any end-game characteristics have been met
-    else
-        ioLoop array gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ")--invalid input
+      --create initial array
+      if validAction input array gamePreset -- if valid input/action
+      then
+          if (input!!2 ==2 ) && getIsBomb (input!!0) (input!!1) array --if the user is digging a bomb, end
+              then putStrLn (['\n','\n'] ++ (printField3DCompleteInitial array (getSizes gamePreset))++ ['\n', '\t'] ++ "Game Over")
+          else if(input!!2==2)
+                  then ioLoop (scanInitial array (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y flag):"
+              else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y flag): "
 
+      --should also check if any end-game characteristics have been met
+      else
+          ioLoop array gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ")--invalid input
 
+progressMessage :: [Int] -> [Int] ->  String
+progressMessage statusCounts gamePreset =
+  "Safe Positions left: "++ (show ((statusCounts!!0)-(gamePreset!!2))) ++ ['\n'] ++ "Flag count: " ++ (show (statusCounts!!1))
 
 --validAction() - take [x,y,action] and the field
     -- Verify
@@ -201,7 +211,7 @@ actionKeyArray = ["unflag","flag","dig"]
 
 --here's an example distirbution of 10 bombs 
 example9x9BombPositions :: [[Int]]
-example9x9BombPositions = [[0,0],[1,8],[3,6],[5,8],[8,0],[1,5],[3,7],[5,0],[3,5],[7,6]]
+example9x9BombPositions = [[0,0],[1,5],[1,8],[3,5],[3,6],[3,7],[5,0],[5,8],[7,6],[8,0]] --Aa,Bf,
 
 
 -- initializeBombArray() -- Use an array of bomb positions to construct a 2d array
@@ -379,35 +389,6 @@ printField3D array x y sizeX sizeY
  --v-v-v- END GAME -v-v-v-v-
 
 
--- =================================== --
--- Accumulation of current game data (flags, invisible spaces)
-currentGameData :: [[[Int]]] -> [Int]
-currentGameData (row:restOfArray) =
-  if null restOfArray
-    then currentGameDataRow row
-  else do
-    let value = currentGameDataRow row
-    let otherValue = currentGameData restOfArray
-    [(value!!0)+(otherValue!!0),(value!!1)+(otherValue!!1)]
-
-currentGameDataRow :: [[Int]] -> [Int]
-currentGameDataRow [] = [0,0]
-currentGameDataRow (element:restOfRow) =
-  if null restOfRow
-    then currentGameDataPosition element
-  else do
-    let value = currentGameDataPosition element
-    let otherValue = currentGameDataRow restOfRow
-    [(value!!0)+(otherValue!!0),(value!!1)+(otherValue!!1)]
-
-currentGameDataPosition :: [Int] -> [Int]
-currentGameDataPosition positionValues 
-  | (positionValues!!2) == 0 = [1,0]  --0 is 'unknown', 1 is 'flag', 2 is 'dug'
-  | (positionValues!!2) == 1 = [0,1]     
-  | otherwise = [0,0]
--- ============================================
-
-
 --at the end of the game there are only 2 visible options (bomb or proximity count)
 getPrintableCharacterEnd :: [Int] -> String
 getPrintableCharacterEnd array
@@ -504,7 +485,36 @@ getPoints field x y xSize ySize
 isVictory :: [[[Int]]] -> Int -> Int -> Int -> Int -> Int -> Bool
 isVictory field x y sizeX sizeY bombCount =
     ((sizeX*sizeY)-bombCount) == getPoints field 0 0 sizeX sizeY
+
+-- =================================== --
+-- Accumulation of current game data (flags, invisible spaces)
+-- =================================== --
+currentGameData :: [[[Int]]] -> [Int]
+currentGameData (row:restOfArray) =
+  if null restOfArray
+    then currentGameDataRow row
+  else do
+    let value = currentGameDataRow row
+    let otherValue = currentGameData restOfArray
+    [(value!!0)+(otherValue!!0),(value!!1)+(otherValue!!1)]
+
+currentGameDataRow :: [[Int]] -> [Int]
+currentGameDataRow [] = [0,0]
+currentGameDataRow (element:restOfRow) =
+  if null restOfRow
+    then currentGameDataPosition element
+  else do
+    let value = currentGameDataPosition element
+    let otherValue = currentGameDataRow restOfRow
+    [(value!!0)+(otherValue!!0),(value!!1)+(otherValue!!1)]
+
+currentGameDataPosition :: [Int] -> [Int]
+currentGameDataPosition positionValues
+  | (positionValues!!2) == 0 = [1,0]  --0 is 'unknown'
+  | (positionValues!!2) == 1 = [1,1]  --1 is 'flag', also means undug
+  | otherwise = [0,0]
 -- ============================================
+
 
 
 
@@ -521,7 +531,6 @@ scanUpdateLoop field (position:rest) =
         then (fieldUpdate field (position!!0) (position!!1) 2)
     else scanUpdateLoop (fieldUpdate field (position!!0) (position!!1) 2) rest
 
--- TODO test
 --take the initial positon, then recursively add surrounding positions that should be visible (can then be fed as a loop to fieldUpdate)
     --base case = [] empty array when the position should not be made visible (if it has already been made visible)
     --second base case = [x,y] when the position has a prox > 0
