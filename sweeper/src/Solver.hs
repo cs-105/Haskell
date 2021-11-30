@@ -22,10 +22,10 @@ isValidFieldInitial fieldProximities bombPositions gamePreset =
   (length bombPositions /=  gamePreset!!2) && isValidFieldLoop fieldProximities bombPositions  --gamePrest!!2 = bombcount
 
 isValidFieldLoop:: [[Int]] -> [[Int]] -> Bool
+isValidFieldLoop fieldProximities [] = isAllZeros fieldProximities --when all the bombs have been decremented
 isValidFieldLoop fieldProximities (bomb:otherBombs) = do
     let tempField = decrementNeighbors fieldProximities (bomb!!0) (bomb!!1)
     (tempField /= []) && isValidFieldLoop tempField otherBombs
-isValidFieldLoop fieldProximities [] = isAllZeros fieldProximities --when all the bombs have been decremented
 
 -- ==========================
 -- decrement
@@ -49,31 +49,32 @@ updateDecrement array xPositions y =
 
 --gets to the correct row
 updateDecrementCol :: [[Int]] -> [Int] -> Int -> Int -> [[Int]]
-updateDecrementCol (first:rest) xPositions y currentY =
+updateDecrementCol (currentRow:restOfRows) xPositions y currentY =
     if y==currentY
-        then updateDecrementRow first xPositions 0 : rest
+        then updateDecrementRow currentRow xPositions 0 : restOfRows
     else
-        first : updateDecrementCol rest xPositions y (currentY+1)
+        currentRow : updateDecrementCol restOfRows xPositions y (currentY+1)
 
---gets to the correct element in the row, and updates
+--gets to the correct element in the row, and updates, and continues down the row if there are multiple to be changed.
+  --return an empty array if it ever fails (means that we need if statments to pass it all the way back up the recursion stack)
 updateDecrementRow :: [Int] -> [Int] -> Int -> [Int]
-updateDecrementRow (first:rest) (x:otherXs) currentX =
-    if x==currentX
-        then if first > 0
+updateDecrementRow (currentProximity:restOfProxInRow) (currentTargetX:otherXs) currentX =
+    if currentTargetX==currentX
+        then if currentProximity > 0
             then if null otherXs
-              then (first-1) : rest
+              then (currentProximity-1) : restOfProxInRow --rebuild the prox array
               else do
-                let temp = updateDecrementRow rest otherXs (currentX+1)
+                let temp = updateDecrementRow restOfProxInRow otherXs (currentX+1)
                 if null temp
                   then []
-                else (first-1) : temp
+                else (currentProximity-1) : temp --rebuild the prox array
         else []
     else do
-      let temp = updateDecrementRow rest (x:otherXs) (currentX+1)
+      let temp = updateDecrementRow restOfProxInRow (currentTargetX:otherXs) (currentX+1) --iterate down the array
       if null temp
         then []
       else
-        first : temp
+        currentProximity : temp --rebuild the array
 
 -- ======================================
 -- Check all known prox's are 0

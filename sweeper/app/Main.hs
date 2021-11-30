@@ -4,14 +4,59 @@ module Main where
 
 import System.Random
 
-import Data.List (findIndices)
+import Data.List (findIndices, delete)
 import Data.String (String)
-import Minefield
+import Minefield (getIndexInRange, allLocations)
 -- =================================== --
 -- CONST Testing
 -- ================================== --
 --getSize :: Int
 --getSize = 9
+
+
+--IOLoop() - (prints, waits, parses user input,)
+    --continually waits for correct user input, once it exists, moves on to ioLoop
+ioInitial :: [Int] -> String -> IO ()
+ioInitial gamePreset message = do
+    putStrLn (printField2D 0 0 (gamePreset!!0) (gamePreset!!1))
+    putStrLn message
+
+    position <- getLine
+
+    let input = parseInput position
+    --create initial array
+    if ((length input == 3) && (input!!0)<(gamePreset!!0) && (input!!1) < (gamePreset!!1)) -- if valid input
+    then do
+        createBombArray [input!!0, input!!1] gamePreset
+    else
+        ioInitial gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ") --invalid input
+
+
+
+--if there is actual bombs on the field
+    -- build the array
+    -- remove the intial user's chosen place from the list of possible bombs
+    -- set the initial bomb array to empty (depricated unless testing proves a need)
+    -- send the bombcount (gamepreset!!2) along 
+createBombArray :: [Int] -> [Int] -> IO ()
+createBombArray input gamePreset =
+  if (gamePreset!!2 >0)
+    then getBombs (delete [(input!!0),(input!!1)] (allLocations (gamePreset!!0) (gamePreset!!1))) (gamePreset!!2) [] input gamePreset
+  else if((input!!2)==2) --if user is digging
+      then ioLoop (scanInitial (proxLoop (initializeBombArray [] (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. X y dig): "
+      else ioLoop (fieldUpdate (proxLoop (initializeBombArray [] (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. X y dig): "
+
+
+getBombs :: [[Int]] -> Int -> [[Int]] -> [Int] -> [Int] -> IO ()
+getBombs possibleBombLocations bombCount currentBombArray input gamePreset = do
+  x <- (getIndexInRange ((length possibleBombLocations)-1))
+  if (bombCount > 0)
+    then getBombs (delete (possibleBombLocations!!x) possibleBombLocations) (bombCount-1) ((possibleBombLocations!!x):currentBombArray) input gamePreset
+  else
+    if((input!!2)==2) --if user is digging
+      then ioLoop (scanInitial (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. X y dig): "
+      else ioLoop (fieldUpdate (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. X y dig): "
+
 
 -- ================================== --
 
@@ -25,8 +70,8 @@ import Minefield
 --Main() - calls initial minesweeper builder and looper
 main :: IO ()
 main = do
-    generateMinefield
-    --ioDificultyLoop ""
+    --generateMinefield
+    ioDificultyLoop ""
 
 --ioDificultyLoop() - (prints, waits, parses user input,)
 --continually waits for correct user input, once it exists, moves on to ioLoopInitial (which waits for correct position input)
@@ -41,7 +86,7 @@ ioDificultyLoop message = do
   let input = ((words response) !! 0)
   if input == "4" || input == "Custom"
       then parseSizeInput
-  else ioLoopInitial (difficultySwitch input) "Give a position (eg. x y flag): "
+  else ioLoopInitial (difficultySwitch input) "Give a position (eg. x y flag): " --HERETIC
 
 --TODO - read the inputs to make sure they are valid BEFORE trying to read (can use parseIsInt)
 parseSizeInput :: IO ()
@@ -78,7 +123,7 @@ presetConfirmation message gamePreset = do
   putStrLn message
   response <- getLine
   if response == "y" || response == "Y"
-    then ioLoopInitial gamePreset  "Give a position ('A a') followed by an action: ('flag', 'dig', 'unflag'): "
+    then ioInitial gamePreset  "Give a position ('A a') followed by an action: ('flag', 'dig', 'unflag'): "
   else ioDificultyLoop ("Returning to difficulty selection..."++['\n'])
 
 
