@@ -27,7 +27,7 @@ ioInitial gamePreset message = do
     --create initial array
     if ((length input == 3) && (input!!0)<(gamePreset!!0) && (input!!1) < (gamePreset!!1)) -- if valid input
     then do
-        createBombArray [input!!0, input!!1] gamePreset
+        createBombArray input gamePreset
     else
         ioInitial gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ") --invalid input
 
@@ -50,6 +50,7 @@ createBombArray input gamePreset =
 getBombs :: [[Int]] -> Int -> [[Int]] -> [Int] -> [Int] -> IO ()
 getBombs possibleBombLocations bombCount currentBombArray input gamePreset = do
   x <- (getIndexInRange ((length possibleBombLocations)-1))
+  putStrLn ("testing: 123: "++(show (length currentBombArray)))
   if (bombCount > 0)
     then getBombs (delete (possibleBombLocations!!x) possibleBombLocations) (bombCount-1) ((possibleBombLocations!!x):currentBombArray) input gamePreset
   else
@@ -86,7 +87,7 @@ ioDificultyLoop message = do
   let input = ((words response) !! 0)
   if input == "4" || input == "Custom"
       then parseSizeInput
-  else ioLoopInitial (difficultySwitch input) "Give a position (eg. x y flag): " --HERETIC
+  else ioInitial (difficultySwitch input) "Give a position (eg. x y flag): " --Heretic
 
 --TODO - read the inputs to make sure they are valid BEFORE trying to read (can use parseIsInt)
 parseSizeInput :: IO ()
@@ -123,7 +124,7 @@ presetConfirmation message gamePreset = do
   putStrLn message
   response <- getLine
   if response == "y" || response == "Y"
-    then ioInitial gamePreset  "Give a position ('A a') followed by an action: ('flag', 'dig', 'unflag'): "
+    then ioInitial gamePreset  "Give a position ('A a') followed by an action: ('flag', 'dig', 'unflag'): " --Heretic
   else ioDificultyLoop ("Returning to difficulty selection..."++['\n'])
 
 
