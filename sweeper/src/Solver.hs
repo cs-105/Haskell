@@ -127,3 +127,83 @@ getVisibleValue positionValues =
       then positionValues!!1 --if dug (visible), return prox
       else (-10)-(positionValues!!2)  --if its unknown, it'll be -10, flag will be -11
 -- ============================================
+
+
+--this function gets the first n items from an array.
+--this is a helper function for ease of reading/writing.
+firstNItems :: Int -> [a] -> [a]
+firstNItems _ []     = []
+firstNItems 0 _      = []
+firstNItems n (x:xs) = [x] ++ (firstNItems (n-1) xs)
+
+--this function will take in the list of length 2^n from probs
+--then it grabs the swathes of the array that correspond with
+--a specific "bomb" or level of the tree (isBomb).
+bombFromProbs :: Int -> [Int] -> [Int]
+bombFromProbs n result = 
+    if(n == 0)
+        then firstNItems ((length result) `div` 2) result
+        else (bombFromProbs (n-1) (firstNItems ((length result) `div` 2) result)) ++ 
+             (bombFromProbs (n-1) (reverse (firstNItems ((length result) `div` 2) (reverse result))))
+
+--this function will fail to work properly if not passed a power of two.
+--fortunately, we're the ones writing it and know that it will not.
+intLogTwo :: Int -> Int
+intLogTwo x =
+    if (odd x)
+        then 0 
+        else floor (logBase 2.0 (fromIntegral x))
+
+--this function takes in the results from probs and returns a decision array.
+--the input will be of length 2^n representing the leaves of the valid states tree.
+--the output will be of length n with each index representing the mine in question 
+--  and an interior array of length 2, where the first number is the number of states
+--  where n is not a bomb, and the second is the number of states where it is a bomb.
+--
+--the input will look something like [1,1,1,1,0,0,0,0] for a 3 mine question.
+--the output will look something like [[4,0],[2,2],[2,2]] for a 3 mine question.
+--i is a looping number that makes the recursion easier. It should be defined as
+--(intLogTwo (length inArr)) when calling the method.
+decisionArrayHelper :: Int -> [Int] -> [[Int]]
+decisionArrayHelper _ []    = []
+decisionArrayHelper 0 _     = []
+decisionArrayHelper n inArr = (decisionArrayHelper (n-1) inArr) ++ 
+                        [[ 
+                        ( sum (bombFromProbs (n-1) inArr)), 
+                        ( sum (bombFromProbs (n-1) (reverse inArr))) 
+                        ]]
+
+decisionArray :: [Int] -> [[Int]]
+decisionArray inArr = decisionArrayHelper (intLogTwo (length inArr)) inArr
+
+--this function, given all the unknowns and knowns, will generate a series of valid
+--board states. The isValidBoardState function (or something similar) was written by
+--Andrew, and as such will simply have some stand-in function for testing.
+--params are as follows
+--  targetedUnkowns:
+--      targetUnknowns are the spaces the solver will be checking. These are the places
+--      that bombs could potentially be.
+--  acceptedBombs:
+--      acceptedBombs are the spaces that the solver is assuming to be a bomb for a
+--      specific recursive branch. These will include bombs already flagged/known as
+--      well as bombs assigned to it from previous calls.
+--  totalBombs:
+--      totalBombs is the number of total bombs on the field; this is fairly straightforward,
+--      and will be used to short-circuit out some intensive/redundant computation.
+probs :: [[Int]] -> [[Int]] -> Int -> [Int]
+probs targetedUnkowns acceptedBombs totalBombs
+    | (length acceptedBombs) >= totalBombs = [0]
+    | length targetedUnkowns == 0 = [isValidBoardState acceptedBombs]
+    | otherwise = (  probs (tail targetedUnkowns) (acceptedBombs) totalBombs  ) ++ 
+                  (  probs (tail targetedUnkowns) (acceptedBombs ++ [head targetedUnkowns]) totalBombs  )
+
+isValidBoardState :: [[Int]] -> Int
+isValidBoardState board = 1
+
+--THIS IS ANDREWS CODE--
+--isValidFieldInitial:: [[Int]] -> [[Int]] -> [Int] -> Bool
+--isValidFieldInitial fieldProximities bombPositions gamePreset =
+--THIS IS ANDREWS CODE--
+
+
+--IF IT IS A BOMB IT GOES RIGHT
