@@ -18,7 +18,8 @@ This is a Haskell implementation and solver of Minesweeper for a college course 
 
 ## Launch
 * Install above technologies
+* Open your terminal and run `cabal install cabal-install`
 * Clone cs-105/Haskell GitHub Repository
 * Navigate to file path in terminal
-* Use command line to run the game: ./Haskell/sweeper/app/Main.hs
+* Use command line to run the game: ./Haskell/sweeper
 * Play the game or use specified command to run the solver
