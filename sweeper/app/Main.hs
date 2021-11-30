@@ -2,15 +2,15 @@ module Main where
 
 --import qualified MyLib (someFunc)
 
-import System.Random
+--import System.Random
+import System.Console.ANSI
 
-import Data.List (findIndices)
+import Data.List (findIndices, delete)
 import Data.String (String)
+import Minefield (getIndexInRange, allLocations, initializeBombArray, proxLoop)
 -- =================================== --
 -- CONST Testing
 -- ================================== --
---getSize :: Int
---getSize = 9
 
 -- ================================== --
 
@@ -24,6 +24,7 @@ import Data.String (String)
 --Main() - calls initial minesweeper builder and looper
 main :: IO ()
 main = do
+    --generateMinefield
     ioDificultyLoop ""
 
 --ioDificultyLoop() - (prints, waits, parses user input,)
@@ -31,6 +32,8 @@ main = do
 ioDificultyLoop :: String -> IO ()
 ioDificultyLoop message = do
   putStrLn message
+  --setSGR [SetColor Foreground Dull Black, SetColor Background Dull Blue] --testing
+
   putStrLn "Choose A Difficulty: (Defaults to easy)"
   putStrLn "Easy: 1   Intermediate: 2   Expert: 3     Custom: 4"
 
@@ -39,7 +42,7 @@ ioDificultyLoop message = do
   let input = ((words response) !! 0)
   if input == "4" || input == "Custom"
       then parseSizeInput
-  else ioLoopInitial (difficultySwitch input) "Give a position (eg. x y flag): "
+  else ioInitial (difficultySwitch input) "Give a position (eg. x y flag): " --Heretic
 
 --TODO - read the inputs to make sure they are valid BEFORE trying to read (can use parseIsInt)
 parseSizeInput :: IO ()
@@ -76,7 +79,7 @@ presetConfirmation message gamePreset = do
   putStrLn message
   response <- getLine
   if response == "y" || response == "Y"
-    then ioLoopInitial gamePreset  "Give a position ('A a') followed by an action: ('flag', 'dig', 'unflag'): "
+    then ioInitial gamePreset  "Give a position ('A a') followed by an action: ('flag', 'dig', 'unflag'): " --Heretic
   else ioDificultyLoop ("Returning to difficulty selection..."++['\n'])
 
 
@@ -87,10 +90,16 @@ difficultySwitch difficulty
   | difficulty == "3" = [30, 16, 99]
   | otherwise = [9, 9, 10]
 
+--Used to get isolate the sizes from the game preset value
+getSizes :: [Int] -> [Int]
+getSizes array =
+  [(array!!0),(array!!1)] --just return the x and y
+
+
 --IOLoop() - (prints, waits, parses user input,)
     --continually waits for correct user input, once it exists, moves on to ioLoop
-ioLoopInitial :: [Int] -> String -> IO ()
-ioLoopInitial gamePreset message = do
+ioInitial :: [Int] -> String -> IO ()
+ioInitial gamePreset message = do
     putStrLn (printField2D 0 0 (gamePreset!!0) (gamePreset!!1))
     putStrLn message
 
@@ -100,18 +109,37 @@ ioLoopInitial gamePreset message = do
     --create initial array
     if ((length input == 3) && (input!!0)<(gamePreset!!0) && (input!!1) < (gamePreset!!1)) -- if valid input
     then do
-        --let bombPositions = getBombPositions (input!!0) (input!!1) (fieldPreset!!2) []
-        let bombPositions = example9x9BombPositions
-        if(input!!2==2) --if user is digging
-            then ioLoop (scanInitial (proxLoop (initializeBombArray bombPositions (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y flag): "
-            else ioLoop (fieldUpdate (proxLoop (initializeBombArray bombPositions (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y flag): "
+        createBombArray input gamePreset
     else
-        ioLoopInitial gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ") --invalid input
+        ioInitial gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ") --invalid input
 
---Used to get isolate the sizes from the game preset value
-getSizes :: [Int] -> [Int]
-getSizes array =
-  [(array!!0),(array!!1)] --just return the x and y
+
+
+--if there is actual bombs on the field
+    -- build the array
+    -- remove the intial user's chosen place from the list of possible bombs
+    -- set the initial bomb array to empty (depricated unless testing proves a need)
+    -- send the bombcount (gamepreset!!2) along 
+createBombArray :: [Int] -> [Int] -> IO ()
+createBombArray input gamePreset =
+  if (gamePreset!!2 >0)
+    then getBombs (delete [(input!!0),(input!!1)] (allLocations (gamePreset!!0) (gamePreset!!1))) (gamePreset!!2) [] input gamePreset
+  else if((input!!2)==2) --if user is digging
+      then ioLoop (scanInitial (proxLoop (initializeBombArray [] (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. X y dig): "
+      else ioLoop (fieldUpdate (proxLoop (initializeBombArray [] (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. X y dig): "
+
+
+getBombs :: [[Int]] -> Int -> [[Int]] -> [Int] -> [Int] -> IO ()
+getBombs possibleBombLocations bombCount currentBombArray input gamePreset = do
+  x <- (getIndexInRange ((length possibleBombLocations)-1))
+  putStrLn ("testing: 123: "++(show (length currentBombArray)))
+  if (bombCount > 0)
+    then getBombs (delete (possibleBombLocations!!x) possibleBombLocations) (bombCount-1) ((possibleBombLocations!!x):currentBombArray) input gamePreset
+  else
+    if((input!!2)==2) --if user is digging
+      then ioLoop (scanInitial (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. X y dig): "
+      else ioLoop (fieldUpdate (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. X y dig): "
+
 
 --TODO - DONE AFTER OTHERS (dependent on others other than Main, so subject to large change)
 --IOLoop() - (prints, waits, parses user input,)
@@ -201,136 +229,6 @@ actionKeyArray = ["unflag","flag","dig"]
 
 
 -- ============================================
-
-
-
-
--- =================================== --
---Initial BOMB FIELD REQUIREMENTS
--- ================================== --
-
---here's an example distirbution of 10 bombs 
-example9x9BombPositions :: [[Int]]
-example9x9BombPositions = [[0,0],[1,5],[1,8],[3,5],[3,6],[3,7],[5,0],[5,8],[7,6],[8,0]] --Aa,Bf,
-
-
--- initializeBombArray() -- Use an array of bomb positions to construct a 2d array
-    -- Use a passed array of bomb positions
-    -- Loop - create initial array
-        -- Check if the current position is a bomb
-            -- If so, set position to 1
-            -- Otherwise, 0
-        -- nextPosition
-    -- Return the created array
-initializeBombArray :: [[Int]] -> [Int] -> [[Int]]
-initializeBombArray bombPositions size =
-    bombLoopCol bombPositions 0 (size!!0) (size!!1)
-
---loop that builds rows returns ([[array!!y!!x, getProx array x y size] : nextElements array x+1 y size)] - returns 2d array of [isBomb, proximityCount, visibilityDesignator] pairs
-bombLoopRow :: [[Int]] -> Int -> Int -> Int ->[Int]
-bombLoopRow bombPositions x y sizeX
-  | x == sizeX-1 = if elem [x,y] bombPositions then [1] else [0]--base case, when done with a row, return the full row
-  | otherwise = if elem [x,y] bombPositions then 1 : bombLoopRow bombPositions (x+1) y sizeX else 0 : bombLoopRow bombPositions (x+1) y sizeX
-
---loop that compiles rows [buildRow array x y size : compileRows array x y+1 size] - returns 3d array
-bombLoopCol :: [[Int]] -> Int -> Int -> Int -> [[Int]]
-bombLoopCol bombPositions y sizeX sizeY
-  | y == sizeY-1 = [bombLoopRow bombPositions 0 y sizeX] --base case, when done with a row, return the full row
-  | otherwise = (bombLoopRow bombPositions 0 y sizeX) : (bombLoopCol bombPositions (y+1) sizeX sizeY)
-
-
-
-
--- getBombPositons() -- Create an array of random bomb positions
-    -- Loop
-        -- Randomly generate a pair
-        -- check if it does not already exist in the array or in the initial position
-            -- If so, add it and decrement a bomb count value
-            -- Otherwise, try again
-    -- Return the sorted array (by y then x)
-getBombPositions :: Int -> Int -> Int -> [[Int]] -> [[Int]]
-getBombPositions x y count bombArray = do
-    let temp = generatePair
-    if count>0
-        then if elem temp bombArray || [x,y] == temp
-            then getBombPositions x y count bombArray
-        else
-            getBombPositions x y (count-1) (temp:bombArray)
-    else bombArray
-
---TODO (Note that this will have to deal with IO sideeffect)
---generatePair -- gives back a random position [x,y]
-    --[take time mod by size, take new time and mod by size] 
-generatePair :: [Int]
-generatePair = [0,1];
-
-
-
--- ========================================
-
-
-
--- =================================== --
--- 3D Field builders
--- ================================== --
-
---  MineField defined - 3d array of row, col, params -> [[[isVisible, ProximityCount, isBomb], [isVisible, ProximityCount, isBomb], ...]] - where isVisible has 3 options, unknown, flag, dug
-
---takes the initial 2d bomb array, and the size (square)
---returns a 3d array filled with cols, rows, [isBomb, proximity, visibilityDesignator]
-proxLoop :: [[Int]] -> [Int] -> [[[Int]]]
-proxLoop array size =
-  proxLoopCol array 0 (size!!0) (size!!1)
-
-
---loop that builds rows returns ([[array!!y!!x, getProx array x y size] : nextElements array x+1 y size)] - returns 2d array of [isBomb, proximityCount, visibilityDesignator] pairs
-proxLoopRow :: [[Int]] -> Int -> Int -> Int -> Int -> [[Int]]
-proxLoopRow array x y sizeX sizeY
-  | x == sizeX-1 = [[((array!!y)!!x),(getProx array x y sizeX sizeY), 0]] --base case, when done with a row, return the full row
-  | otherwise = [((array!!y)!!x),(getProx array x y sizeX sizeY), 0] : (proxLoopRow array (x+1) y sizeX sizeY)
-
---loop that compiles rows [buildRow array x y size : compileRows array x y+1 size] - returns 3d array
-proxLoopCol :: [[Int]] -> Int -> Int -> Int -> [[[Int]]]
-proxLoopCol array y sizeX sizeY
-  | y == sizeY-1 = [proxLoopRow array 0 y sizeX sizeY] --base case, when done with a row, return the full row
-  | otherwise = (proxLoopRow array 0 y sizeX sizeY) : (proxLoopCol array (y+1) sizeX sizeY)
-
-
---params = [[Isbomb]], row, col, sizeOfGrid
---returns the number of bombs in proximity
-getProx :: [[Int]] -> Int -> Int -> Int -> Int -> Int
-getProx array x y sizeX sizeY
-  | (y == 0 || y == sizeY-1) = if (y==0) --if top
-                           then do
-                               if (x == 0 || x == sizeX-1) --if its on either of the extremes x
-                               then do
-                                   if(x==0) -- if top left
-                                       then ((array!!y)!!(x+1))+((array!!(y+1))!!(x+1))+((array!!(y+1))!!(x))
-                                   else --if top right
-                                       ((array!!y)!!(x-1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))
-                               else --if its in the top middle
-                                   ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y+1))!!(x+1))
-                       else
-                           do
-                               if (x == 0 || x == sizeX-1) --if its on either of the extremes x
-                               then do
-                                   if(x==0) -- if bottom left
-                                       then ((array!!y)!!(x+1))+((array!!(y-1))!!(x+1))+((array!!(y-1))!!(x))
-                                   else --if bottom right
-                                       ((array!!y)!!(x-1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))
-                               else --if its in the bottom middle
-                                   ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))+((array!!(y-1))!!(x+1))
-  | (x == 0 || x == sizeX-1) = do
-        if(x==0) -- if left
-            then ((array!!y)!!(x+1))+((array!!(y+1))!!(x+1))+((array!!(y+1))!!(x))+((array!!(y-1))!!(x+1))+((array!!(y-1))!!(x))
-        else --if right
-            ((array!!y)!!(x-1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))
-  | otherwise = --if its in the middle
-        ((array!!y)!!(x-1))+((array!!y)!!(x+1))+((array!!(y+1))!!(x-1))+((array!!(y+1))!!(x))+((array!!(y+1))!!(x+1))+((array!!(y-1))!!(x-1))+((array!!(y-1))!!(x))+((array!!(y-1))!!(x+1))
-
--- ============================================
-
-
 
 -- =================================== --
 -- Array IO Helper functions
