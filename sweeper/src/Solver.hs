@@ -107,7 +107,7 @@ isZero positionValues =
 -- ================================== --
 getVisible :: [[[Int]]] -> [[Int]]
 getVisible [] = []
-takeProx (row:restOfArray) =
+getVisible (row:restOfArray) =
   if null restOfArray
     then [getVisibleRow row]
   else
