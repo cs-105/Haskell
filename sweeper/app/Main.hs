@@ -32,7 +32,7 @@ main = do
 ioDificultyLoop :: String -> IO ()
 ioDificultyLoop message = do
   putStrLn message
-  --setSGR [SetColor Foreground Dull Black, SetColor Background Dull Blue] --testing
+  --setSGR [SetColor Foreground Dull Black, SetColor Background Dull White] --testing
 
   putStrLn "Choose A Difficulty: (Defaults to easy)"
   putStrLn "Easy: 1   Intermediate: 2   Expert: 3     Custom: 4"
@@ -42,7 +42,7 @@ ioDificultyLoop message = do
   let input = ((words response) !! 0)
   if input == "4" || input == "Custom"
       then parseSizeInput
-  else ioInitial (difficultySwitch input) "Give a position (eg. x y flag): " --Heretic
+  else ioInitial (difficultySwitch input) "Give a position (eg. x y flag): "
 
 --TODO - read the inputs to make sure they are valid BEFORE trying to read (can use parseIsInt)
 parseSizeInput :: IO ()
@@ -54,13 +54,13 @@ parseSizeInput = do
     putStrLn "How many columns (1-16)?  "
     y <- getLine
     --parse to int, and double check its valid
-    putStrLn "How many bombs (Positive number smaller than size of field)? "
+    putStrLn "How many bombs (Positive number smaller than (x*y)-9)? "
     bombCount <- getLine
     --parse to int, and double check its valid
     let intX = read x
     let intY = read y
     let intCount = read bombCount
-    if intX > 1 && intY > 1 && intCount >= 1 && intX <= 30 && intY <= 16 && (intCount < (intX*intY))
+    if intX > 1 && intY > 1 && intCount >= 1 && intX <= 30 && intY <= 16 && (intCount < ((intX*intY)-9))
       then presetConfirmation ("Confirm preset: " ++ show intX ++"x" ++ show intY ++", " ++ show intCount ++ " bombs" ++ ['\n'] ++"[y/N]?") [intX, intY, intCount]
     else
       ioDificultyLoop "Invalid input"
@@ -79,7 +79,7 @@ presetConfirmation message gamePreset = do
   putStrLn message
   response <- getLine
   if response == "y" || response == "Y"
-    then ioInitial gamePreset  "Give a position ('A a') followed by an action: ('flag', 'dig', 'unflag'): " --Heretic
+    then ioInitial gamePreset  "Give a position ('A a') followed by an action: ('flag', 'dig', 'unflag'): "
   else ioDificultyLoop ("Returning to difficulty selection..."++['\n'])
 
 
@@ -100,7 +100,8 @@ getSizes array =
     --continually waits for correct user input, once it exists, moves on to ioLoop
 ioInitial :: [Int] -> String -> IO ()
 ioInitial gamePreset message = do
-    putStrLn (printField2D 0 0 (gamePreset!!0) (gamePreset!!1))
+    --putStrLn (printField2D 0 0 (gamePreset!!0) (gamePreset!!1))
+    printField2DInitialIO [(gamePreset!!0),(gamePreset!!1)]
     putStrLn message
 
     position <- getLine
@@ -123,7 +124,7 @@ ioInitial gamePreset message = do
 createBombArray :: [Int] -> [Int] -> IO ()
 createBombArray input gamePreset =
   if (gamePreset!!2 >0)
-    then getBombs (delete [(input!!0),(input!!1)] (allLocations (gamePreset!!0) (gamePreset!!1))) (gamePreset!!2) [] input gamePreset
+    then getBombs (removeFromPossibleBombsList (gatherNeighbors (input!!0) (input!!1)) (allLocations (gamePreset!!0) (gamePreset!!1))) (gamePreset!!2) [] input gamePreset
   else if((input!!2)==2) --if user is digging
       then ioLoop (scanInitial (proxLoop (initializeBombArray [] (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. X y dig): "
       else ioLoop (fieldUpdate (proxLoop (initializeBombArray [] (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. X y dig): "
@@ -132,13 +133,23 @@ createBombArray input gamePreset =
 getBombs :: [[Int]] -> Int -> [[Int]] -> [Int] -> [Int] -> IO ()
 getBombs possibleBombLocations bombCount currentBombArray input gamePreset = do
   x <- (getIndexInRange ((length possibleBombLocations)-1))
-  putStrLn ("testing: 123: "++(show (length currentBombArray)))
   if (bombCount > 0)
     then getBombs (delete (possibleBombLocations!!x) possibleBombLocations) (bombCount-1) ((possibleBombLocations!!x):currentBombArray) input gamePreset
   else
     if((input!!2)==2) --if user is digging
       then ioLoop (scanInitial (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. X y dig): "
       else ioLoop (fieldUpdate (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. X y dig): "
+
+
+
+gatherNeighbors :: Int -> Int -> [[Int]]
+gatherNeighbors x y =  [[(x-1),(y-1)],[x,(y-1)],[(x+1),(y-1)],[(x-1),y],[x,y],[(x+1),y],[(x-1),(y+1)],[x,(y+1)],[(x+1),(y+1)]]
+
+removeFromPossibleBombsList :: [[Int]] -> [[Int]] -> [[Int]]
+removeFromPossibleBombsList [] possibleBombs = possibleBombs
+removeFromPossibleBombsList notBombs [] = []
+removeFromPossibleBombsList (currentNotBomb:notBombs) possibleBombs =
+  removeFromPossibleBombsList notBombs (delete currentNotBomb possibleBombs)
 
 
 --TODO - DONE AFTER OTHERS (dependent on others other than Main, so subject to large change)
@@ -156,7 +167,7 @@ ioLoop:: [[[Int]]] -> [Int] -> String -> IO ()
 ioLoop array gamePreset message = do
     --putStrLn (show (length ((array!!0)!!0)))
     putStr ['\n','\n']
-    putStrLn (printField3DInitial array (getSizes gamePreset))
+    printField3DInitialIO array (getSizes gamePreset)
     let gameStatus = currentGameData array --gameStatus!!0 is unknown count, gameStatus!!1 is flags count
     putStrLn (progressMessage gameStatus gamePreset)
     if ((gameStatus!!0 - gamePreset!!2) == 0)
@@ -174,14 +185,40 @@ ioLoop array gamePreset message = do
       if validAction input array gamePreset -- if valid input/action
       then
           if (input!!2 ==2 ) && getIsBomb (input!!0) (input!!1) array --if the user is digging a bomb, end
-              then putStrLn (['\n','\n'] ++ (printField3DCompleteInitial array (getSizes gamePreset))++ ['\n', '\t'] ++ "Game Over")
+              then do 
+                putStr ['\n','\n']
+                printField3DEndInitialIO array (getSizes gamePreset)
+                putStrLn (progressMessage gameStatus gamePreset)
+                setSGR [SetColor Background Vivid Red, SetColor Foreground Vivid White]
+                putStr (['\t'] ++ "Game Over")
+                setSGR [Reset]
           else if(input!!2==2)
                   then ioLoop (scanInitial array (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y flag):"
               else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y flag): "
 
-      --should also check if any end-game characteristics have been met
+      --check if its invalid, or if player is using solver
       else
+        if input == [1] then do 
+            let h = solve 
+            let msg = ("Solver tried: "++ (rowKeyArray!!(h!!0))++ " " ++(colKeyArray!!(h!!1)) ++ " "++ (actionKeyArray!!(h!!2) ++ " with a " ++ (show (h!!3)) ++ "/" ++ (show (h!!4))) ++ " chance.")
+            if (h!!2 ==2 ) && getIsBomb (h!!0) (h!!1) array --if the user is digging a bomb, end
+              then do 
+                putStr ['\n','\n']
+                printField3DEndInitialIO array (getSizes gamePreset)
+                putStrLn (progressMessage gameStatus gamePreset)
+                setSGR [SetColor Background Vivid Red, SetColor Foreground Vivid White]
+                putStr (['\t'] ++ "Game Over")
+                setSGR [Reset]
+            else if(h!!2==2)
+                    then ioLoop (scanInitial array (h!!0) (h!!1) (getSizes gamePreset)) gamePreset (msg ++ ['\n']++ "Give a position (eg. x y flag):")
+                else ioLoop (fieldUpdate array (h!!0) (h!!1) (h!!2)) gamePreset (msg ++ ['\n']++ "Give a position (eg. x y flag):")
+        else
           ioLoop array gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ")--invalid input
+
+solve :: [Int] --MONTY PUT THE SOLVER HERE
+solve = [1,0,2,4,6]
+
+--solve takes numOfBombs (gamePreset!!2), arrayOfFlagPositions, arrayOfUnknownsNeighboringKnowns 
 
 progressMessage :: [Int] -> [Int] ->  String
 progressMessage statusCounts gamePreset =
@@ -194,6 +231,7 @@ progressMessage statusCounts gamePreset =
 validAction :: [Int] -> [[[Int]]] -> [Int] -> Bool
 validAction parsedInput field size =
     ((length parsedInput) == 3 && (parsedInput!!0) < (size!!0) && (parsedInput!!1) < (size!!1)) && ((getVisibilityDesignator (parsedInput!!0) (parsedInput!!1) field)/=2)
+
 
 
 --parseInput() - take a string, parse it to an [x,y] coordinate pair, along with the action specifier (0 - unflag, 1 - flag, 2 - dig)
@@ -212,7 +250,7 @@ parseInput input = do
                 [(findIndices (==(l!!0)) rowKeyArray)!!0, (findIndices (==(l!!1)) colKeyArray)!!0, (findIndices (==(l!!2)) actionKeyArray)!!0]
             else []
     else
-        [] --Not following correct convention for input
+      if (length l == 1) && ((l!!0) == "solve" || (l!!0) == "help") then [1] else [] --Not following correct convention for input
 
 
 --in expert mode, there are only (at max 16 rows, so we start there)
@@ -234,22 +272,6 @@ actionKeyArray = ["unflag","flag","dig"]
 -- Array IO Helper functions
 -- ================================== --
 
-
---Prints the UI spread for the user's intial choice (DOES NOT CREATE A FIELD)
-printField2DInitial :: [Int] -> String
-printField2DInitial size = printField2D 0 0 (size!!0) (size!!1)
-
---Prints the UI spread for the user's intial choice (DOES NOT CREATE A FIELD)
-printField2D :: Int -> Int -> Int -> Int -> String
-printField2D x y sizeX sizeY
-  | x == 0 && y/= sizeY+1 = concat [getCoordinateY y, " ", printField2D (x+1) (y) sizeX sizeY]
-  | x == sizeX && y==0 = concat [getCoordinateX x, ['\n'], printField2D 0 (y+1) sizeX sizeY]
-  | x == sizeX && y/=0 && y/=sizeY+1 = concat ["?", ['\n'], printField2D 0 (y+1) sizeX sizeY]
-
-  | y == 0 && x/=sizeX = concat [getCoordinateX x, " ", printField2D (x+1) y sizeX sizeY]
-  | y==sizeY+1 = ""
-  | otherwise = concat ["?", " ", printField2D (x+1) y sizeX sizeY]
-
 --Hardcoded arrays - Allows for quick indexing and creation of the UI Coordinates
 getCoordinateX :: Int -> String
 getCoordinateX x =
@@ -267,25 +289,94 @@ getPrintableCharacter array
   | otherwise = show (array!!1) -- where m is the index for the proximity count, because it would be visibile if it were a bomb
 
 
+--Prints the UI spread for the user's intial choice (DOES NOT CREATE A FIELD)
+printField2DInitialIO :: [Int] -> IO ()
+printField2DInitialIO size = printField2DIO 0 0 (size!!0) (size!!1)
 
-printField3DInitial :: [[[Int]]] -> [Int] -> String
-printField3DInitial array sizes = printField3D array 0 0 (sizes!!0) (sizes!!1)
+--Prints the UI spread for the user's intial choice (DOES NOT CREATE A FIELD)
+printField2DIO :: Int -> Int -> Int -> Int -> IO ()
+printField2DIO x y sizeX sizeY
+  | x == 0 && y/= sizeY+1 = do
+    setSGR coordinateColor
+    putStr (getCoordinateY y)
+    putStr " "
+    setSGR [Reset]
+    printField2DIO (x+1) y sizeX sizeY
+  | x == sizeX && y==0 = do
+    setSGR coordinateColor
+    putStr (getCoordinateX x)
+    setSGR [Reset]
+    putStr ['\n']
+    printField2DIO 0 (y+1) sizeX sizeY
+  | x == sizeX && y/=0 && y/=sizeY+1 = do
+    setSGR (whatColor "?") 
+    putStr "?"
+    setSGR [Reset]
+    putStr ['\n']
+    printField2DIO 0 (y+1) sizeX sizeY
+  | y == 0 && x/=sizeX = do
+    setSGR coordinateColor 
+    putStr ((getCoordinateX x) ++ " ")
+    setSGR [Reset]
+    printField2DIO (x+1) y sizeX sizeY
+  | y==sizeY+1 = putStr ""
+  | otherwise = do
+    setSGR (whatColor "?") 
+    putStr "? "
+    setSGR [Reset]
+    printField2DIO (x+1) y sizeX sizeY  
+
+printField3DInitialIO :: [[[Int]]] -> [Int] -> IO ()
+printField3DInitialIO array sizes = printField3DIO array 0 0 (sizes!!0) (sizes!!1)
 
 
 -- creates a singular formated string from the completed 3d array
-printField3D :: [[[Int]]] -> Int -> Int -> Int -> Int -> String
-printField3D array x y sizeX sizeY
-  | x == 0 && y/=sizeY+1 = concat [getCoordinateY y, " ", printField3D array (x+1) y sizeX sizeY]
-  | x == sizeX && y==0 = concat [getCoordinateX x, ['\n'], printField3D array 0 (y+1) sizeX sizeY]
-  | x == sizeX && y/=0 && y/=sizeY+1 = concat [getPrintableCharacter ((array!!(y-1))!!(x-1)), ['\n'], printField3D array 0 (y+1) sizeX sizeY]
+printField3DIO :: [[[Int]]] -> Int -> Int -> Int -> Int -> IO ()
+printField3DIO array x y sizeX sizeY
+  | x == 0 && y/=sizeY+1 = do 
+      setSGR coordinateColor 
+      putStr (getCoordinateY y)
+      putStr " "
+      setSGR [Reset]
+      printField3DIO array (x+1) y sizeX sizeY
+  | x == sizeX && y==0 = do
+      setSGR coordinateColor
+      putStr (getCoordinateX x)
+      setSGR [Reset]
+      putStr ['\n']
+      printField3DIO array 0 (y+1) sizeX sizeY
+  | x == sizeX && y/=0 && y/=sizeY+1 = do
+      setSGR (whatColor (getPrintableCharacter ((array!!(y-1))!!(x-1))))
+      putStr (getPrintableCharacter ((array!!(y-1))!!(x-1)))
+      setSGR [Reset]
+      putStr ['\n']
+      printField3DIO array 0 (y+1) sizeX sizeY
+  | y == 0 && x/=sizeX = do
+      setSGR coordinateColor
+      putStr (getCoordinateX x)
+      putStr " "
+      setSGR [Reset]
+      printField3DIO array (x+1) y sizeX sizeY
+  | y==sizeY+1 = putStr ""
+  | otherwise = (do
+      setSGR (whatColor (getPrintableCharacter ((array!!(y-1))!!(x-1))))
+      putStr ((getPrintableCharacter ((array!!(y-1))!!(x-1))) ++ " ")
+      setSGR [Reset]
+      printField3DIO array (x+1) y sizeX sizeY)
 
-  | y == 0 && x/=sizeX = concat [getCoordinateX x, " ", printField3D array (x+1) y sizeX sizeY]
-  | y==sizeY+1 = ""
-  | otherwise = concat [getPrintableCharacter ((array!!(y-1))!!(x-1)), " ", printField3D array (x+1) y sizeX sizeY]
+whatColor :: String -> [SGR]
+whatColor visibleChar
+  | visibleChar=="X" = [SetColor Foreground Dull Red, SetColor Background Dull Green]
+  | visibleChar=="?" = [SetColor Foreground Dull Black, SetColor Background Dull Green]
+  | visibleChar=="B" = [SetColor Foreground Dull Black, SetColor Background Dull Red]
+  | visibleChar=="0" = [SetColor Foreground Dull Blue, SetColor Background Dull Green]
+  | otherwise = [SetColor Foreground Dull Black, SetColor Background Dull Green]
+
+coordinateColor :: [SGR]
+coordinateColor = [SetColor Foreground Dull Black, SetColor Background Dull Blue] 
 
 
  --v-v-v- END GAME -v-v-v-v-
-
 
 --at the end of the game there are only 2 visible options (bomb or proximity count)
 getPrintableCharacterEnd :: [Int] -> String
@@ -296,19 +387,42 @@ getPrintableCharacterEnd array
 
 
 --call when the game is over (creates a single formated string with full visibility)
-printField3DCompleteInitial :: [[[Int]]] -> [Int] -> String
-printField3DCompleteInitial array sizes = printField3DComplete array 0 0 (sizes!!0) (sizes!!1)
+printField3DEndInitialIO :: [[[Int]]] -> [Int] -> IO ()
+printField3DEndInitialIO array sizes = printField3DEndIO array 0 0 (sizes!!0) (sizes!!1)
 
 --call when the game is over (creates a single formated string with full visibility)
-printField3DComplete :: [[[Int]]] -> Int -> Int -> Int -> Int -> String
-printField3DComplete array x y sizeX sizeY
-  | x == 0 && y/= sizeY+1 = concat [getCoordinateY y, " ", printField3DComplete array (x+1) y sizeX sizeY]
-  | x == sizeX && y==0 = concat [getCoordinateX x, ['\n'], printField3DComplete array 0 (y+1) sizeX sizeY]
-  | x == sizeX && y/=0 && y/=sizeY+1 = concat [getPrintableCharacterEnd ((array!!(y-1))!!(x-1)), ['\n'], printField3DComplete array 0 (y+1) sizeX sizeY]
-
-  | y == 0 && x/=sizeX = concat [getCoordinateX x, " ", printField3DComplete array (x+1) y sizeX sizeY]
-  | y==sizeY+1 = ""
-  | otherwise = concat [getPrintableCharacterEnd ((array!!(y-1))!!(x-1)), " ", printField3DComplete array (x+1) y sizeX sizeY]
+printField3DEndIO :: [[[Int]]] -> Int -> Int -> Int -> Int -> IO ()
+printField3DEndIO array x y sizeX sizeY
+  | x == 0 && y/=sizeY+1 = do 
+      setSGR coordinateColor 
+      putStr (getCoordinateY y)
+      putStr " "
+      setSGR [Reset]
+      printField3DEndIO array (x+1) y sizeX sizeY
+  | x == sizeX && y==0 = do
+      setSGR coordinateColor
+      putStr (getCoordinateX x)
+      setSGR [Reset]
+      putStr ['\n']
+      printField3DEndIO array 0 (y+1) sizeX sizeY
+  | x == sizeX && y/=0 && y/=sizeY+1 = do
+      setSGR (whatColor (getPrintableCharacterEnd ((array!!(y-1))!!(x-1))))
+      putStr (getPrintableCharacterEnd ((array!!(y-1))!!(x-1)))
+      setSGR [Reset]
+      putStr ['\n']
+      printField3DEndIO array 0 (y+1) sizeX sizeY
+  | y == 0 && x/=sizeX = do
+      setSGR coordinateColor
+      putStr (getCoordinateX x)
+      putStr " "
+      setSGR [Reset]
+      printField3DEndIO array (x+1) y sizeX sizeY
+  | y==sizeY+1 = putStr ""
+  | otherwise = (do
+      setSGR (whatColor (getPrintableCharacterEnd ((array!!(y-1))!!(x-1))))
+      putStr ((getPrintableCharacterEnd ((array!!(y-1))!!(x-1))) ++ " ")
+      setSGR [Reset]
+      printField3DEndIO array (x+1) y sizeX sizeY)
 
 
 -- ============================================
@@ -329,11 +443,6 @@ getIsBomb :: Int -> Int -> [[[Int]]] -> Bool
 getIsBomb x y array =
     (getPositionTuple x y array)!!0 == 1
 
-{-
--- not used
-getIsBombEfficient :: [[[Int]]] -> Int -> Int -> Bool
-getIsBombEfficient array x y =
-    1== ((array!!y)!!x)!!0-}
 
 --takes the field and the coordinate to tell the proximity count
 getProximity :: Int -> Int -> [[[Int]]] -> Int
@@ -372,17 +481,6 @@ fieldUpdateRow (first:rest) x action currentX =
     else
         first : fieldUpdateRow rest x action (currentX+1)
 
---VICTORY CONDITIONS:
---Go through the whole array, get the amount of 
-getPoints :: [[[Int]]] -> Int -> Int -> Int -> Int -> Int
-getPoints field x y xSize ySize
-  | x == xSize-1 = if getVisibilityDesignator x y field == 2 then 1 + getPoints field 0 (y+1) xSize ySize else 0 + getPoints field 0 (y+1) xSize ySize
-  | y==ySize = 0
-  | otherwise = if getVisibilityDesignator x y field == 2 then 1 + getPoints field (x+1) y xSize ySize else 0 + getPoints field (x+1) y xSize ySize
-
-isVictory :: [[[Int]]] -> Int -> Int -> Int -> Int -> Int -> Bool
-isVictory field x y sizeX sizeY bombCount =
-    ((sizeX*sizeY)-bombCount) == getPoints field 0 0 sizeX sizeY
 
 -- =================================== --
 -- Accumulation of current game data (flags, invisible spaces)
