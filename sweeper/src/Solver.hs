@@ -1,6 +1,6 @@
 --Main will call this function
 
-module Solver (solve) where
+module Solver (solverMain) where
 import Data.List (sort, findIndex)
 
 solve :: IO ()
@@ -24,8 +24,7 @@ solverMain :: [[[Int]]] -> Int -> [Int]
 solverMain field bombCount = do 
   let visibleArray = (getVisible field)
   let flagsAndUnkownsBorderingKnowns = solveLoopInitial visibleArray
-  --montySolve visibleArray bombCount (flagsAndUnkownsBorderingKnowns!!0) (flagsAndUnkownsBorderingKnowns!!1)
-  [0]
+  solveFinal (flagsAndUnkownsBorderingKnowns!!0) (flagsAndUnkownsBorderingKnowns!!1) bombCount visibleArray
 
 
 --solve takes numOfBombs (gamePreset!!2), arrayOfFlagPositions, arrayOfUnknownsNeighboringKnowns 
@@ -286,7 +285,7 @@ fromJust (Just x) = x
 probs :: [[Int]] -> [[Int]] -> Int -> [Int]
 probs targetedUnkowns acceptedBombs totalBombs
     | (length acceptedBombs) >= totalBombs = [0]
-    | length targetedUnkowns == 0 = [isValidBoardState acceptedBombs]
+    | length targetedUnkowns == 0 = [isValidFieldInitial fieldProximities acceptedBombs totalBombs]
     | otherwise = (  probs (tail targetedUnkowns) (acceptedBombs) totalBombs  ) ++ 
                   (  probs (tail targetedUnkowns) (acceptedBombs ++ [head targetedUnkowns]) totalBombs  )
 
@@ -295,8 +294,9 @@ isValidBoardState board = 1
 
 --this is it! the function you've been looking for! above this are all the wonderful
 --functions which make a function such as this possible. This function takes in...
-solveFinal :: [[Int]] -> [[Int]] -> Int -> [Int]
-solveFinal targetedUnkowns acceptedBombs totalBombs = 
+--I don't fully understand what the visibleArray is, but Andrew needs it for something
+solveFinal :: [[Int]] -> [[Int]] -> Int -> [[Int]] -> [Int]
+solveFinal targetedUnkowns acceptedBombs totalBombs visibleArray = 
     do
     let dArr = decisionArray (probs targetedUnkowns acceptedBombs totalBombs) --[[vState,!vState]]
     let bestMoveVar = bestMoveHelper (dArr) (sum (dArr !! 0)) --[index,action] action == 0 or 2
@@ -304,9 +304,9 @@ solveFinal targetedUnkowns acceptedBombs totalBombs =
     let finalOutput = 
                     [ ((targetedUnkowns !! (bestMoveVar !! 0)) !! 0)      --x
                     , ((targetedUnkowns !! (bestMoveVar !! 0)) !! 1)      --y
-                    , (bestMoveVar !! 1)      --action
-                    , numerator      --numerator
-                    , (sum (dArr !! 0))      ]--denominator
+                    , (bestMoveVar !! 1)                                  --action
+                    , numerator                                           --numerator
+                    , (sum (dArr !! 0))      ]                            --denominator
     finalOutput
 
 --THIS IS ANDREWS CODE--

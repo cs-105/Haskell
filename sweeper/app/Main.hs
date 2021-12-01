@@ -199,7 +199,7 @@ ioLoop array gamePreset message = do
       --check if its invalid, or if player is using solver
       else
         if input == [1] then do
-            let h = solve
+            let h = solve array (gamePreset!!2)
             let msg = ("Solver tried: "++ (rowKeyArray!!(h!!0))++ " " ++(colKeyArray!!(h!!1)) ++ " "++ (actionKeyArray!!(h!!2) ++ " with a " ++ (show (h!!3)) ++ "/" ++ (show (h!!4))) ++ " chance.")
             if (h!!2 ==2 ) && getIsBomb (h!!0) (h!!1) array --if the user is digging a bomb, end
               then do
@@ -215,8 +215,8 @@ ioLoop array gamePreset message = do
         else
           ioLoop array gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ")--invalid input
 
-solve :: [Int] --MONTY PUT THE SOLVER HERE
-solve = [1,0,2,4,6]
+solve :: [[[Int]]] -> Int -> [Int] --MONTY PUT THE SOLVER HERE
+solve field bmombCount = solverMain field bmombCount
 
 
 
