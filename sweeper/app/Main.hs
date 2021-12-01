@@ -8,7 +8,7 @@ import System.Console.ANSI
 import Data.List (findIndices, delete)
 import Data.String (String)
 import Minefield (getIndexInRange, allLocations, initializeBombArray, proxLoop)
-import Solver (solverMain)
+import Solver (solverMain, getVisible, isValidFieldInitial)
 -- =================================== --
 -- CONST Testing
 -- ================================== --
@@ -140,9 +140,10 @@ getBombs possibleBombLocations bombCount currentBombArray input gamePreset = do
     then getBombs (delete (possibleBombLocations!!x) possibleBombLocations) (bombCount-1) ((possibleBombLocations!!x):currentBombArray) input gamePreset
   else
     if((input!!2)==2) --if user is digging
-      then ioLoop (scanInitial (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset messageContinue
+      then ioLoop (scanInitial (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset messageContinue -- putStr (show (isValidFieldInitial (getVisible (fieldUpdate (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2))) currentBombArray (gamePreset!!2)))
       else ioLoop (fieldUpdate (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset messageContinue
-
+--heretic
+--isvalid (getVisible (initilize bombArray)) currentBombArray (gamePreset!!2)
 
 
 gatherNeighbors :: Int -> Int -> [[Int]]
