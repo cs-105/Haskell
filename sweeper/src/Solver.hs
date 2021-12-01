@@ -24,7 +24,7 @@ solverMain :: [[[Int]]] -> Int -> [Int]
 solverMain field bombCount = do 
   let visibleArray = (getVisible field)
   let flagsAndUnkownsBorderingKnowns = solveLoopInitial visibleArray
-  solveFinal (flagsAndUnkownsBorderingKnowns!!0) (flagsAndUnkownsBorderingKnowns!!1) bombCount visibleArray
+  solveFinal (flagsAndUnkownsBorderingKnowns!!1) (flagsAndUnkownsBorderingKnowns!!0) bombCount visibleArray --index 1 is unknowns, 0 is the flags
 
 
 --solve takes numOfBombs (gamePreset!!2), arrayOfFlagPositions, arrayOfUnknownsNeighboringKnowns 
@@ -37,7 +37,7 @@ solverMain field bombCount = do
 
 
 -- ==========================
--- flag and unknownNeigboringKnwon accumulator loops
+-- flag and unknownNeigboringKnwon accumulator loops -tested and fixed
 -- =================
 
 solveLoopInitial :: [[Int]] -> [[[Int]]]
@@ -61,32 +61,32 @@ hasKnownNeighbors array x y =
 
 hasKnownNeighborsT :: [[Int]] -> Int -> Int -> Bool
 hasKnownNeighborsT array x y
-  | y > 0 && x > 0 && x < (length (array!!0)) = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsM array x y --Any on top
-  | y > 0 && x > 0 = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || hasKnownNeighborsM array x y --Not TR
-  | y > 0 && x < (length (array!!0)) = ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsM array x y --Not TL
+  | y > 0 && x > 0 && x < ((length (array!!0))-1) = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsM array x y --Any on top
+  | y > 0 && x > 0                                = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || hasKnownNeighborsM array x y --Not TR
+  | y > 0 && x < ((length (array!!0))-1)          = ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsM array x y --Not TL
   | otherwise = hasKnownNeighborsM array x y
 
 hasKnownNeighborsM :: [[Int]] -> Int -> Int -> Bool
 hasKnownNeighborsM array x y
-  | x > 0 && x < (length (array!!0)) = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsB array x y --Either L or R
-  | x > 0 = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || hasKnownNeighborsB array x y --Not R
-  | x < (length (array!!0)) = ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsB array x y--Not L
+  | x > 0 && x < ((length (array!!0))-1)          = ((array!!(y))!!(x-1)) >= 0 || ((array!!(y))!!(x)) >= 0 || ((array!!(y))!!(x+1)) >= 0 || hasKnownNeighborsB array x y --Either L or R
+  | x > 0                                         = ((array!!(y))!!(x-1)) >= 0 || ((array!!(y))!!(x)) >= 0 || hasKnownNeighborsB array x y --Not R
+  | x < ((length (array!!0))-1)                   = ((array!!(y))!!(x)) >= 0 || ((array!!(y))!!(x+1)) >= 0 || hasKnownNeighborsB array x y--Not L
   | otherwise = hasKnownNeighborsB array x y
 
 hasKnownNeighborsB :: [[Int]] -> Int -> Int -> Bool
 hasKnownNeighborsB array x y
-  | y < (length array) && x > 0 && x < (length (array!!0)) = ((array!!(y+1))!!(x-1)) >= 0 || ((array!!(y+1))!!(x)) >= 0 || ((array!!(y+1))!!(x+1)) >= 0 --Any on bottom
-  | y < (length array) && x > 0 = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 --Not BR
-  | y < (length array) && x < (length (array!!0)) = ((array!!(y+1))!!(x)) >= 0 || ((array!!(y+1))!!(x+1)) >= 0 --Not BL
+  | y < ((length array)-1) && x > 0 && x < ((length (array!!0))-1) = ((array!!(y+1))!!(x-1)) >= 0 || ((array!!(y+1))!!(x)) >= 0 || ((array!!(y+1))!!(x+1)) >= 0 --Any on bottom
+  | y < ((length array)-1) && x > 0                                = ((array!!(y+1))!!(x-1)) >= 0 || ((array!!(y+1))!!(x)) >= 0 --Not BR
+  | y < ((length array)-1) && x < ((length (array!!0))-1)           = ((array!!(y+1))!!(x)) >= 0 || ((array!!(y+1))!!(x+1)) >= 0 --Not BL
   | otherwise = 1==0
 
 -- ==========================
 
 
 
-isValidFieldInitial:: [[Int]] -> [[Int]] -> Int -> Bool
+isValidFieldInitial:: [[Int]] -> [[Int]] -> Int -> Int
 isValidFieldInitial fieldProximities bombPositions bombCount =
-  (length bombPositions /=  bombCount) && isValidFieldLoop fieldProximities bombPositions  --gamePrest!!2 = bombcount
+  if ((length bombPositions /=  bombCount) && (isValidFieldLoop fieldProximities bombPositions))  then 1 else 0 --gamePrest!!2 = bombcount
 
 isValidFieldLoop:: [[Int]] -> [[Int]] -> Bool
 --isValidFieldLoop fieldProximities [] = isAllZeros fieldProximities --when all the bombs have been decremented
@@ -170,7 +170,7 @@ isZero positionValues =
 
 
 -- =================================== --
--- Create an array of values for the solver to use
+-- Create an array of values for the solver to use, tested, works
 -- ================================== --
 getVisible :: [[[Int]]] -> [[Int]]
 getVisible [] = []
@@ -282,12 +282,12 @@ fromJust (Just x) = x
 --  totalBombs:
 --      totalBombs is the number of total bombs on the field; this is fairly straightforward,
 --      and will be used to short-circuit out some intensive/redundant computation.
-probs :: [[Int]] -> [[Int]] -> Int -> [Int]
-probs targetedUnkowns acceptedBombs totalBombs
+probs :: [[Int]] -> [[Int]] -> Int -> [[Int]] -> [Int]
+probs targetedUnkowns acceptedBombs totalBombs visibleArray
     | (length acceptedBombs) >= totalBombs = [0]
-    | length targetedUnkowns == 0 = [isValidFieldInitial fieldProximities acceptedBombs totalBombs]
-    | otherwise = (  probs (tail targetedUnkowns) (acceptedBombs) totalBombs  ) ++ 
-                  (  probs (tail targetedUnkowns) (acceptedBombs ++ [head targetedUnkowns]) totalBombs  )
+    | length targetedUnkowns == 0 = [isValidFieldInitial visibleArray acceptedBombs totalBombs] -- TODO type mismatch, you'll have to pass it down
+    | otherwise = (  probs (tail targetedUnkowns) (acceptedBombs) totalBombs  visibleArray ) ++ 
+                  (  probs (tail targetedUnkowns) (acceptedBombs ++ [head targetedUnkowns]) totalBombs visibleArray)
 
 isValidBoardState :: [[Int]] -> Int
 isValidBoardState board = 1
@@ -298,7 +298,7 @@ isValidBoardState board = 1
 solveFinal :: [[Int]] -> [[Int]] -> Int -> [[Int]] -> [Int]
 solveFinal targetedUnkowns acceptedBombs totalBombs visibleArray = 
     do
-    let dArr = decisionArray (probs targetedUnkowns acceptedBombs totalBombs) --[[vState,!vState]]
+    let dArr = decisionArray (probs targetedUnkowns acceptedBombs totalBombs visibleArray) --[[vState,!vState]]
     let bestMoveVar = bestMoveHelper (dArr) (sum (dArr !! 0)) --[index,action] action == 0 or 2
     let numerator = if ((bestMoveVar !! 1) == 2) then (1) else (0)
     let finalOutput = 
@@ -313,6 +313,5 @@ solveFinal targetedUnkowns acceptedBombs totalBombs visibleArray =
 --isValidFieldInitial:: [[Int]] -> [[Int]] -> [Int] -> Bool
 --isValidFieldInitial fieldProximities bombPositions gamePreset =
 --THIS IS ANDREWS CODE--
-
 
 --IF IT IS A BOMB IT GOES RIGHT

@@ -22,7 +22,7 @@ maintainer:         lumontgomery@westmont.edu
 extra-source-files: CHANGELOG.md
 
 library
-    exposed-modules:  MyLib, Minefield
+    exposed-modules:  MyLib, Minefield, Solver
 
     -- Modules included in this library but not exported.
     -- other-modules:
