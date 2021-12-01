@@ -7,14 +7,18 @@
 * [Launch](#launch)
 
 ## Introduction
-This is a Haskell implementation and solver of Minesweeper for a college course on Programming Languages. Our aim of the project is to highlight the unique aspects of Haskell as a functional programming language, including its provability in the solver portion of the project. 
+This is a Haskell implementation and solver of Minesweeper for a college course on Programming Languages. Our aim of the project is to highlight the unique aspects of Haskell as a functional programming language, in both our minesweeper implementation and solver. 
 
 ## Technologies
-* Haskell version: 
-* Cabal version: 
+* Follow the instructions here to install necessary technologies:
+  * https://www.haskell.org/platform/
+* Haskell version: Haskell2010
+* Base version: >= 4.14 && < 4.16
+* Cabal version: 4.2
 
 ## Launch
-* Download Minesweeper executable file through GitHub
+* Install above technologies
+* Clone cs-105/Haskell GitHub Repository
 * Navigate to file path in terminal
-* Use command to run the .exe file
+* Use command line to run the game: ./Haskell/sweeper/app/Main.hs
 * Play the game or use specified command to run the solver
