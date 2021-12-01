@@ -1,7 +1,7 @@
 --Main will call this function
 
 module Solver (solve) where
-import Data.List (sort)
+import Data.List (sort, findIndex)
 
 solve :: IO ()
 solve = putStrLn "hi"
@@ -177,6 +177,30 @@ decisionArrayHelper n inArr = (decisionArrayHelper (n-1) inArr) ++
 decisionArray :: [Int] -> [[Int]]
 decisionArray inArr = decisionArrayHelper (intLogTwo (length inArr)) inArr
 
+--this function takes in the results from decisionArray and returns a useful
+--object which defines teh best move.
+--the input is as follows
+--  Decision Array:
+--      output of the function decisionArray
+--  0 = index of best move
+--  1 = action to be taken (1 = flag as bomb, 2 = dig as not bomb)
+bestMoveHelper :: [[Int]] -> Int -> [Int]
+bestMoveHelper dArr totalValid = 
+    --This branch finds if we can gurantee a safe space
+    if (maximum ( foldr (++) ([]) (map (take 1) (dArr)) ) == totalValid) 
+        then [fromJust (findIndex (== totalValid) (foldr (++) ([]) (map (take 1) (dArr)))), 2]
+        else if (maximum ( foldr (++) ([]) (map (drop 1) (dArr)) ) == totalValid)
+            then [fromJust (findIndex (== totalValid) (foldr (++) ([]) (map (drop 1) (dArr)))), 1]
+            else if (totalValid == 0)
+                then [-1, -1]
+                else bestMoveHelper dArr (totalValid - 1)
+
+--pulled this from the following, thanks 
+--https://stackoverflow.com/questions/4940349/how-to-get-the-value-of-a-maybe-in-haskell
+fromJust :: Maybe a -> a
+fromJust Nothing = error "Maybe.fromJust: Nothing"
+fromJust (Just x) = x
+
 --this function, given all the unknowns and knowns, will generate a series of valid
 --board states. The isValidBoardState function (or something similar) was written by
 --Andrew, and as such will simply have some stand-in function for testing.
@@ -200,6 +224,22 @@ probs targetedUnkowns acceptedBombs totalBombs
 
 isValidBoardState :: [[Int]] -> Int
 isValidBoardState board = 1
+
+--this is it! the function you've been looking for! above this are all the wonderful
+--functions which make a function such as this possible. This function takes in...
+solveFinal :: [[Int]] -> [[Int]] -> Int -> [Int]
+solveFinal targetedUnkowns acceptedBombs totalBombs = 
+    do
+    let dArr = decisionArray (probs targetedUnkowns acceptedBombs totalBombs) --[[vState,!vState]]
+    let bestMoveVar = bestMoveHelper (dArr) (sum (dArr !! 0)) --[index,action] action == 0 or 2
+    let numerator = if ((bestMoveVar !! 1) == 2) then (1) else (0)
+    let finalOutput = 
+                    [ ((targetedUnkowns !! (bestMoveVar !! 0)) !! 0)      --x
+                    , ((targetedUnkowns !! (bestMoveVar !! 0)) !! 1)      --y
+                    , (bestMoveVar !! 1)      --action
+                    , numerator      --numerator
+                    , (sum (dArr !! 0))      ]--denominator
+    finalOutput
 
 --THIS IS ANDREWS CODE--
 --isValidFieldInitial:: [[Int]] -> [[Int]] -> [Int] -> Bool
