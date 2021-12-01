@@ -185,7 +185,7 @@ ioLoop array gamePreset message = do
       if validAction input array gamePreset -- if valid input/action
       then
           if (input!!2 ==2 ) && getIsBomb (input!!0) (input!!1) array --if the user is digging a bomb, end
-              then do 
+              then do
                 putStr ['\n','\n']
                 printField3DEndInitialIO array (getSizes gamePreset)
                 putStrLn (progressMessage gameStatus gamePreset)
@@ -198,11 +198,11 @@ ioLoop array gamePreset message = do
 
       --check if its invalid, or if player is using solver
       else
-        if input == [1] then do 
-            let h = solve 
+        if input == [1] then do
+            let h = solve
             let msg = ("Solver tried: "++ (rowKeyArray!!(h!!0))++ " " ++(colKeyArray!!(h!!1)) ++ " "++ (actionKeyArray!!(h!!2) ++ " with a " ++ (show (h!!3)) ++ "/" ++ (show (h!!4))) ++ " chance.")
             if (h!!2 ==2 ) && getIsBomb (h!!0) (h!!1) array --if the user is digging a bomb, end
-              then do 
+              then do
                 putStr ['\n','\n']
                 printField3DEndInitialIO array (getSizes gamePreset)
                 putStrLn (progressMessage gameStatus gamePreset)
@@ -217,6 +217,8 @@ ioLoop array gamePreset message = do
 
 solve :: [Int] --MONTY PUT THE SOLVER HERE
 solve = [1,0,2,4,6]
+
+
 
 --solve takes numOfBombs (gamePreset!!2), arrayOfFlagPositions, arrayOfUnknownsNeighboringKnowns 
 
@@ -309,22 +311,22 @@ printField2DIO x y sizeX sizeY
     putStr ['\n']
     printField2DIO 0 (y+1) sizeX sizeY
   | x == sizeX && y/=0 && y/=sizeY+1 = do
-    setSGR (whatColor "?") 
+    setSGR (whatColor "?")
     putStr "?"
     setSGR [Reset]
     putStr ['\n']
     printField2DIO 0 (y+1) sizeX sizeY
   | y == 0 && x/=sizeX = do
-    setSGR coordinateColor 
+    setSGR coordinateColor
     putStr ((getCoordinateX x) ++ " ")
     setSGR [Reset]
     printField2DIO (x+1) y sizeX sizeY
   | y==sizeY+1 = putStr ""
   | otherwise = do
-    setSGR (whatColor "?") 
+    setSGR (whatColor "?")
     putStr "? "
     setSGR [Reset]
-    printField2DIO (x+1) y sizeX sizeY  
+    printField2DIO (x+1) y sizeX sizeY
 
 printField3DInitialIO :: [[[Int]]] -> [Int] -> IO ()
 printField3DInitialIO array sizes = printField3DIO array 0 0 (sizes!!0) (sizes!!1)
@@ -333,8 +335,8 @@ printField3DInitialIO array sizes = printField3DIO array 0 0 (sizes!!0) (sizes!!
 -- creates a singular formated string from the completed 3d array
 printField3DIO :: [[[Int]]] -> Int -> Int -> Int -> Int -> IO ()
 printField3DIO array x y sizeX sizeY
-  | x == 0 && y/=sizeY+1 = do 
-      setSGR coordinateColor 
+  | x == 0 && y/=sizeY+1 = do
+      setSGR coordinateColor
       putStr (getCoordinateY y)
       putStr " "
       setSGR [Reset]
@@ -373,7 +375,7 @@ whatColor visibleChar
   | otherwise = [SetColor Foreground Dull Black, SetColor Background Dull Green]
 
 coordinateColor :: [SGR]
-coordinateColor = [SetColor Foreground Dull Black, SetColor Background Dull Blue] 
+coordinateColor = [SetColor Foreground Dull Black, SetColor Background Dull Blue]
 
 
  --v-v-v- END GAME -v-v-v-v-
@@ -393,8 +395,8 @@ printField3DEndInitialIO array sizes = printField3DEndIO array 0 0 (sizes!!0) (s
 --call when the game is over (creates a single formated string with full visibility)
 printField3DEndIO :: [[[Int]]] -> Int -> Int -> Int -> Int -> IO ()
 printField3DEndIO array x y sizeX sizeY
-  | x == 0 && y/=sizeY+1 = do 
-      setSGR coordinateColor 
+  | x == 0 && y/=sizeY+1 = do
+      setSGR coordinateColor
       putStr (getCoordinateY y)
       putStr " "
       setSGR [Reset]
