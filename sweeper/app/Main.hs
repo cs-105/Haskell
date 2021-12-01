@@ -8,6 +8,7 @@ import System.Console.ANSI
 import Data.List (findIndices, delete)
 import Data.String (String)
 import Minefield (getIndexInRange, allLocations, initializeBombArray, proxLoop)
+import Solver (solverMain, getVisible, isValidFieldInitial)
 -- =================================== --
 -- CONST Testing
 -- ================================== --
@@ -42,7 +43,7 @@ ioDificultyLoop message = do
   let input = ((words response) !! 0)
   if input == "4" || input == "Custom"
       then parseSizeInput
-  else ioInitial (difficultySwitch input) "Give a position (eg. x y flag): "
+  else ioInitial (difficultySwitch input) "Give a position ('X y') followed by an action ('dig'): "
 
 --TODO - read the inputs to make sure they are valid BEFORE trying to read (can use parseIsInt)
 parseSizeInput :: IO ()
@@ -79,9 +80,11 @@ presetConfirmation message gamePreset = do
   putStrLn message
   response <- getLine
   if response == "y" || response == "Y"
-    then ioInitial gamePreset  "Give a position ('A a') followed by an action: ('flag', 'dig', 'unflag'): "
+    then ioInitial gamePreset messageContinue
   else ioDificultyLoop ("Returning to difficulty selection..."++['\n'])
 
+messageContinue :: String
+messageContinue = "Give a position ('X y') followed by an action ('flag', 'dig', 'unflag'); or type 'solve' to have a solver attempt a single solution: "
 
 difficultySwitch :: String -> [Int]
 difficultySwitch difficulty
@@ -108,11 +111,11 @@ ioInitial gamePreset message = do
 
     let input = parseInput position
     --create initial array
-    if ((length input == 3) && (input!!0)<(gamePreset!!0) && (input!!1) < (gamePreset!!1)) -- if valid input
+    if ((length input == 3) && (input!!0)<(gamePreset!!0) && (input!!1) < (gamePreset!!1) && ((input!!2) == 2)) -- if valid input
     then do
         createBombArray input gamePreset
     else
-        ioInitial gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ") --invalid input
+        ioInitial gamePreset ("Invalid Input. "++ "Give a position ('X y') followed by an action ('dig'): " ++['\n','\t']++"For example, 'A a dig': ") --invalid input
 
 
 
@@ -126,8 +129,8 @@ createBombArray input gamePreset =
   if (gamePreset!!2 >0)
     then getBombs (removeFromPossibleBombsList (gatherNeighbors (input!!0) (input!!1)) (allLocations (gamePreset!!0) (gamePreset!!1))) (gamePreset!!2) [] input gamePreset
   else if((input!!2)==2) --if user is digging
-      then ioLoop (scanInitial (proxLoop (initializeBombArray [] (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. X y dig): "
-      else ioLoop (fieldUpdate (proxLoop (initializeBombArray [] (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. X y dig): "
+      then ioLoop (scanInitial (proxLoop (initializeBombArray [] (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset messageContinue
+      else ioLoop (fieldUpdate (proxLoop (initializeBombArray [] (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset messageContinue
 
 
 getBombs :: [[Int]] -> Int -> [[Int]] -> [Int] -> [Int] -> IO ()
@@ -137,9 +140,10 @@ getBombs possibleBombLocations bombCount currentBombArray input gamePreset = do
     then getBombs (delete (possibleBombLocations!!x) possibleBombLocations) (bombCount-1) ((possibleBombLocations!!x):currentBombArray) input gamePreset
   else
     if((input!!2)==2) --if user is digging
-      then ioLoop (scanInitial (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. X y dig): "
-      else ioLoop (fieldUpdate (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. X y dig): "
-
+      then ioLoop (scanInitial (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (getSizes gamePreset)) gamePreset messageContinue -- putStr (show (isValidFieldInitial (getVisible (fieldUpdate (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2))) currentBombArray (gamePreset!!2)))
+      else ioLoop (fieldUpdate (proxLoop (initializeBombArray currentBombArray (getSizes gamePreset)) (getSizes gamePreset)) (input!!0) (input!!1) (input!!2)) gamePreset messageContinue
+--heretic
+--isvalid (getVisible (initilize bombArray)) currentBombArray (gamePreset!!2)
 
 
 gatherNeighbors :: Int -> Int -> [[Int]]
@@ -193,13 +197,13 @@ ioLoop array gamePreset message = do
                 putStr (['\t'] ++ "Game Over")
                 setSGR [Reset]
           else if(input!!2==2)
-                  then ioLoop (scanInitial array (input!!0) (input!!1) (getSizes gamePreset)) gamePreset "Give a position (eg. x y flag):"
-              else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) gamePreset "Give a position (eg. x y flag): "
+                  then ioLoop (scanInitial array (input!!0) (input!!1) (getSizes gamePreset)) gamePreset messageContinue
+              else ioLoop (fieldUpdate array (input!!0) (input!!1) (input!!2)) gamePreset messageContinue
 
       --check if its invalid, or if player is using solver
       else
         if input == [1] then do
-            let h = solve
+            let h = solve array (gamePreset!!2)
             let msg = ("Solver tried: "++ (rowKeyArray!!(h!!0))++ " " ++(colKeyArray!!(h!!1)) ++ " "++ (actionKeyArray!!(h!!2) ++ " with a " ++ (show (h!!3)) ++ "/" ++ (show (h!!4))) ++ " chance.")
             if (h!!2 ==2 ) && getIsBomb (h!!0) (h!!1) array --if the user is digging a bomb, end
               then do
@@ -210,13 +214,20 @@ ioLoop array gamePreset message = do
                 putStr (['\t'] ++ "Game Over")
                 setSGR [Reset]
             else if(h!!2==2)
-                    then ioLoop (scanInitial array (h!!0) (h!!1) (getSizes gamePreset)) gamePreset (msg ++ ['\n']++ "Give a position (eg. x y flag):")
-                else ioLoop (fieldUpdate array (h!!0) (h!!1) (h!!2)) gamePreset (msg ++ ['\n']++ "Give a position (eg. x y flag):")
+                    then ioLoop (scanInitial array (h!!0) (h!!1) (getSizes gamePreset)) gamePreset (msg ++ ['\n']++ messageContinue)
+                else ioLoop (fieldUpdate array (h!!0) (h!!1) (h!!2)) gamePreset (msg ++ ['\n']++ messageContinue)
         else
-          ioLoop array gamePreset ("Invalid Input. Give a position (A a ) followed by an action: (flag, dig, unflag)."++['\n','\t']++"For example, 'A a flag': ")--invalid input
+          ioLoop array gamePreset ("Invalid Input. " ++ messageContinue ++['\n','\t']++"For example, 'A a flag': ")--invalid input
 
-solve :: [Int] --MONTY PUT THE SOLVER HERE
-solve = [1,0,2,4,6]
+solve :: [[[Int]]] -> Int -> [Int] --MONTY PUT THE SOLVER HERE
+solve field bmombCount = solverMain field bmombCount
+--solve field bmombCount = do
+  --let x = solveLoopInitial (getVisible field)
+  --putStrLn ((show (length x))++" "++(show (length (x!!0)))++ " "++(show (length (x!!1))))
+  --return [0,1,2,3,4]
+--solve field bmombCount = [0,1,2,3,4]
+
+
 
 
 

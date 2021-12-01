@@ -1,6 +1,6 @@
 --Main will call this function
 
-module Solver (solve) where
+module Solver (solverMain, getVisible, isValidFieldInitial) where
 import Data.List (sort, findIndex)
 
 solve :: IO ()
@@ -21,11 +21,10 @@ solve = putStrLn "hi"
 -- =================
 
 solverMain :: [[[Int]]] -> Int -> [Int]
-solverMain field bombCount = do 
+solverMain field bombCount = do
   let visibleArray = (getVisible field)
   let flagsAndUnkownsBorderingKnowns = solveLoopInitial visibleArray
-  --montySolve visibleArray bombCount (flagsAndUnkownsBorderingKnowns!!0) (flagsAndUnkownsBorderingKnowns!!1)
-  [0]
+  solveFinal (flagsAndUnkownsBorderingKnowns!!1) (flagsAndUnkownsBorderingKnowns!!0) bombCount visibleArray --index 1 is unknowns, 0 is the flags
 
 
 --solve takes numOfBombs (gamePreset!!2), arrayOfFlagPositions, arrayOfUnknownsNeighboringKnowns 
@@ -38,7 +37,7 @@ solverMain field bombCount = do
 
 
 -- ==========================
--- flag and unknownNeigboringKnwon accumulator loops
+-- flag and unknownNeigboringKnwon accumulator loops -tested and fixed
 -- =================
 
 solveLoopInitial :: [[Int]] -> [[[Int]]]
@@ -62,35 +61,35 @@ hasKnownNeighbors array x y =
 
 hasKnownNeighborsT :: [[Int]] -> Int -> Int -> Bool
 hasKnownNeighborsT array x y
-  | y > 0 && x > 0 && x < (length (array!!0)) = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsM array x y --Any on top
-  | y > 0 && x > 0 = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || hasKnownNeighborsM array x y --Not TR
-  | y > 0 && x < (length (array!!0)) = ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsM array x y --Not TL
+  | y > 0 && x > 0 && x < ((length (array!!0))-1) = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsM array x y --Any on top
+  | y > 0 && x > 0                                = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || hasKnownNeighborsM array x y --Not TR
+  | y > 0 && x < ((length (array!!0))-1)          = ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsM array x y --Not TL
   | otherwise = hasKnownNeighborsM array x y
 
 hasKnownNeighborsM :: [[Int]] -> Int -> Int -> Bool
 hasKnownNeighborsM array x y
-  | x > 0 && x < (length (array!!0)) = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsB array x y --Either L or R
-  | x > 0 = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || hasKnownNeighborsB array x y --Not R
-  | x < (length (array!!0)) = ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsB array x y--Not L
+  | x > 0 && x < ((length (array!!0))-1)          = ((array!!(y))!!(x-1)) >= 0 || ((array!!(y))!!(x)) >= 0 || ((array!!(y))!!(x+1)) >= 0 || hasKnownNeighborsB array x y --Either L or R
+  | x > 0                                         = ((array!!(y))!!(x-1)) >= 0 || ((array!!(y))!!(x)) >= 0 || hasKnownNeighborsB array x y --Not R
+  | x < ((length (array!!0))-1)                   = ((array!!(y))!!(x)) >= 0 || ((array!!(y))!!(x+1)) >= 0 || hasKnownNeighborsB array x y--Not L
   | otherwise = hasKnownNeighborsB array x y
 
 hasKnownNeighborsB :: [[Int]] -> Int -> Int -> Bool
 hasKnownNeighborsB array x y
-  | y < (length array) && x > 0 && x < (length (array!!0)) = ((array!!(y+1))!!(x-1)) >= 0 || ((array!!(y+1))!!(x)) >= 0 || ((array!!(y+1))!!(x+1)) >= 0 --Any on bottom
-  | y < (length array) && x > 0 = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 --Not BR
-  | y < (length array) && x < (length (array!!0)) = ((array!!(y+1))!!(x)) >= 0 || ((array!!(y+1))!!(x+1)) >= 0 --Not BL
+  | y < ((length array)-1) && x > 0 && x < ((length (array!!0))-1) = ((array!!(y+1))!!(x-1)) >= 0 || ((array!!(y+1))!!(x)) >= 0 || ((array!!(y+1))!!(x+1)) >= 0 --Any on bottom
+  | y < ((length array)-1) && x > 0                                = ((array!!(y+1))!!(x-1)) >= 0 || ((array!!(y+1))!!(x)) >= 0 --Not BR
+  | y < ((length array)-1) && x < ((length (array!!0))-1)           = ((array!!(y+1))!!(x)) >= 0 || ((array!!(y+1))!!(x+1)) >= 0 --Not BL
   | otherwise = 1==0
 
 -- ==========================
 
 
 
-isValidFieldInitial:: [[Int]] -> [[Int]] -> Int -> Bool
+isValidFieldInitial:: [[Int]] -> [[Int]] -> Int -> Int
 isValidFieldInitial fieldProximities bombPositions bombCount =
-  (length bombPositions /=  bombCount) && isValidFieldLoop fieldProximities bombPositions  --gamePrest!!2 = bombcount
+  if ((length bombPositions <=  bombCount) && (isValidFieldLoop fieldProximities bombPositions))  then 1 else 0 --gamePrest!!2 = bombcount
 
 isValidFieldLoop:: [[Int]] -> [[Int]] -> Bool
---isValidFieldLoop fieldProximities [] = isAllZeros fieldProximities --when all the bombs have been decremented
+isValidFieldLoop fieldProximities [] = (1==1) --when all the bombs have been decremented
 isValidFieldLoop fieldProximities (bomb:otherBombs) = do
     let tempField = decrementNeighbors fieldProximities (bomb!!0) (bomb!!1)
     (tempField /= []) && isValidFieldLoop tempField otherBombs
@@ -99,7 +98,8 @@ isValidFieldLoop fieldProximities (bomb:otherBombs) = do
 -- decrement
 -- =================
 decrementNeighbors :: [[Int]] -> Int -> Int -> [[Int]]
-decrementNeighbors field x y
+decrementNeighbors field x y = updateDecrement (updateDecrement (updateDecrement field [(x-1),(x+1)] y)  [(x-1),x,(x+1)] (y+1)) [(x-1),x,(x+1)] (y-1)  
+{-
   | x == (length (field!!0))-1 && y==0 = updateDecrement (updateDecrement field [(x-1)] y)  [(x-1),x] (y-1)                         --top right - scan L,LB,B
   | x == 0 && y==0 = updateDecrement (updateDecrement field [(x+1)] y)  [x,(x+1)] (y-1)                                             --top left - scan R,RB,B
   | y == 0 = updateDecrement (updateDecrement field [(x-1),(x+1)] y)  [(x-1),x,(x+1)] (y-1)                                         --top middle - scan L,LB,B,RB,R
@@ -109,40 +109,47 @@ decrementNeighbors field x y
   | x == 0 = updateDecrement (updateDecrement (updateDecrement field [(x+1)] y)  [x,(x+1)] (y+1)) [x,(x+1)] (y-1)                   --left - scan T,TR,R,B,BR
   | x == (length (field!!0))-1 = updateDecrement (updateDecrement (updateDecrement field [(x-1)] y)  [(x-1),x] (y+1)) [(x-1),x] (y-1)   --right - scan T,TL,L,BL,B
   | otherwise = updateDecrement (updateDecrement (updateDecrement field [(x-1),(x+1)] y)  [(x-1),x,(x+1)] (y+1)) [(x-1),x,(x+1)] (y-1)                    --middle/center - scan T,TR,R,BR,B,BL,L,TL
+-}
+--
 
 --takes the current game array, and an array of all the xvalues to be changed in the given row, returns an empty array if the field becomes invalid (prox's under 0)
 updateDecrement :: [[Int]] -> [Int] -> Int -> [[Int]]
 updateDecrement array xPositions y =
-    updateDecrementCol array xPositions y 0
+  if(y<0 || y>= (length array)) then array -- if y is outside the bounds of the array, return an unaltered array
+  else
+    updateDecrementCol array xPositions y 0 -- decrement the specific values in the given row
 
 --gets to the correct row
 updateDecrementCol :: [[Int]] -> [Int] -> Int -> Int -> [[Int]]
+updateDecrementCol [] xPositions y currentY = []
 updateDecrementCol (currentRow:restOfRows) xPositions y currentY =
-    if y==currentY
-        then updateDecrementRow currentRow xPositions 0 : restOfRows
+    if y==currentY -- made it to correct yvalue, decrement
+        then updateDecrementRow currentRow xPositions 0 (length currentRow) : restOfRows 
     else
         currentRow : updateDecrementCol restOfRows xPositions y (currentY+1)
 
 --gets to the correct element in the row, and updates, and continues down the row if there are multiple to be changed.
   --return an empty array if it ever fails (means that we need if statments to pass it all the way back up the recursion stack)
-updateDecrementRow :: [Int] -> [Int] -> Int -> [Int]
-updateDecrementRow (currentProximity:restOfProxInRow) (currentTargetX:otherXs) currentX =
-    if currentTargetX==currentX
-        then if currentProximity > 0 || currentProximity < (-9)
-            then if null otherXs
-              then (currentProximity-1) : restOfProxInRow --rebuild the prox array
-              else do
-                let temp = updateDecrementRow restOfProxInRow otherXs (currentX+1)
-                if null temp
-                  then []
-                else (currentProximity-1) : temp --rebuild the prox array
-        else []
-    else do
-      let temp = updateDecrementRow restOfProxInRow (currentTargetX:otherXs) (currentX+1) --iterate down the array
-      if null temp
-        then []
-      else
-        currentProximity : temp --rebuild the array
+updateDecrementRow :: [Int] -> [Int] -> Int -> Int -> [Int]
+updateDecrementRow [] (currentTargetX:otherXs) currentX sizeX = []
+updateDecrementRow (currentProximity:restOfProxInRow) [] currentX sizeX = (currentProximity:restOfProxInRow)
+updateDecrementRow (currentProximity:restOfProxInRow) (currentTargetX:otherXs) currentX sizeX
+  | (currentTargetX<0 || currentTargetX >= (sizeX)) = updateDecrementRow (currentProximity:restOfProxInRow) otherXs currentX sizeX --invalid x value outside bounds
+  | currentTargetX==currentX = if currentProximity > 0 || currentProximity < (-9) --made it to valid target
+                              then if null otherXs
+                                then (currentProximity-1) : restOfProxInRow --rebuild the prox array if there are no other values to update
+                                else do
+                                  let temp = updateDecrementRow restOfProxInRow otherXs (currentX+1) sizeX
+                                  if null temp --if invalid
+                                    then []
+                                  else (currentProximity-1) : temp --rebuild the prox array with the array created from the rest of the functons
+                          else [] --invalid proxArray, too many bombs for the prox
+  | otherwise = do --if not quite at the targetX
+  let temp = updateDecrementRow restOfProxInRow (currentTargetX:otherXs) (currentX+1) sizeX --iterate down the array
+  if null temp -- double check its a valid
+    then []
+  else
+    currentProximity : temp --rebuild the array with the later calls
 
 -- ======================================
 -- Check all known prox's are 0
@@ -171,7 +178,7 @@ isZero positionValues =
 
 
 -- =================================== --
--- Create an array of values for the solver to use
+-- Create an array of values for the solver to use, tested, works
 -- ================================== --
 getVisible :: [[[Int]]] -> [[Int]]
 getVisible [] = []
@@ -209,10 +216,10 @@ firstNItems n (x:xs) = [x] ++ (firstNItems (n-1) xs)
 --then it grabs the swathes of the array that correspond with
 --a specific "bomb" or level of the tree (isBomb).
 bombFromProbs :: Int -> [Int] -> [Int]
-bombFromProbs n result = 
+bombFromProbs n result =
     if(n == 0)
         then firstNItems ((length result) `div` 2) result
-        else (bombFromProbs (n-1) (firstNItems ((length result) `div` 2) result)) ++ 
+        else (bombFromProbs (n-1) (firstNItems ((length result) `div` 2) result)) ++
              (bombFromProbs (n-1) (reverse (firstNItems ((length result) `div` 2) (reverse result))))
 
 --this function will fail to work properly if not passed a power of two.
@@ -220,7 +227,7 @@ bombFromProbs n result =
 intLogTwo :: Int -> Int
 intLogTwo x =
     if (odd x)
-        then 0 
+        then 0
         else floor (logBase 2.0 (fromIntegral x))
 
 --this function takes in the results from probs and returns a decision array.
@@ -236,10 +243,10 @@ intLogTwo x =
 decisionArrayHelper :: Int -> [Int] -> [[Int]]
 decisionArrayHelper _ []    = []
 decisionArrayHelper 0 _     = []
-decisionArrayHelper n inArr = (decisionArrayHelper (n-1) inArr) ++ 
-                        [[ 
-                        ( sum (bombFromProbs (n-1) inArr)), 
-                        ( sum (bombFromProbs (n-1) (reverse inArr))) 
+decisionArrayHelper n inArr = (decisionArrayHelper (n-1) inArr) ++
+                        [[
+                        ( sum (bombFromProbs (n-1) inArr)),
+                        ( sum (bombFromProbs (n-1) (reverse inArr)))
                         ]]
 
 decisionArray :: [Int] -> [[Int]]
@@ -253,9 +260,9 @@ decisionArray inArr = decisionArrayHelper (intLogTwo (length inArr)) inArr
 --  0 = index of best move
 --  1 = action to be taken (1 = flag as bomb, 2 = dig as not bomb)
 bestMoveHelper :: [[Int]] -> Int -> [Int]
-bestMoveHelper dArr totalValid = 
+bestMoveHelper dArr totalValid =
     --This branch finds if we can gurantee a safe space
-    if (maximum ( foldr (++) ([]) (map (take 1) (dArr)) ) == totalValid) 
+    if (maximum ( foldr (++) ([]) (map (take 1) (dArr)) ) == totalValid)
         then [fromJust (findIndex (== totalValid) (foldr (++) ([]) (map (take 1) (dArr)))), 2]
         else if (maximum ( foldr (++) ([]) (map (drop 1) (dArr)) ) == totalValid)
             then [fromJust (findIndex (== totalValid) (foldr (++) ([]) (map (drop 1) (dArr)))), 1]
@@ -283,36 +290,36 @@ fromJust (Just x) = x
 --  totalBombs:
 --      totalBombs is the number of total bombs on the field; this is fairly straightforward,
 --      and will be used to short-circuit out some intensive/redundant computation.
-probs :: [[Int]] -> [[Int]] -> Int -> [Int]
-probs targetedUnkowns acceptedBombs totalBombs
+probs :: [[Int]] -> [[Int]] -> Int -> [[Int]] -> [Int]
+probs targetedUnkowns acceptedBombs totalBombs visibleArray
     | (length acceptedBombs) >= totalBombs = [0]
-    | length targetedUnkowns == 0 = [isValidBoardState acceptedBombs]
-    | otherwise = (  probs (tail targetedUnkowns) (acceptedBombs) totalBombs  ) ++ 
-                  (  probs (tail targetedUnkowns) (acceptedBombs ++ [head targetedUnkowns]) totalBombs  )
+    | length targetedUnkowns == 0 = [isValidFieldInitial visibleArray acceptedBombs totalBombs] -- TODO type mismatch, you'll have to pass it down
+    | otherwise = (  probs (tail targetedUnkowns) (acceptedBombs) totalBombs  visibleArray ) ++
+                  (  probs (tail targetedUnkowns) (acceptedBombs ++ [head targetedUnkowns]) totalBombs visibleArray)
 
 isValidBoardState :: [[Int]] -> Int
 isValidBoardState board = 1
 
 --this is it! the function you've been looking for! above this are all the wonderful
 --functions which make a function such as this possible. This function takes in...
-solveFinal :: [[Int]] -> [[Int]] -> Int -> [Int]
-solveFinal targetedUnkowns acceptedBombs totalBombs = 
+--I don't fully understand what the visibleArray is, but Andrew needs it for something
+solveFinal :: [[Int]] -> [[Int]] -> Int -> [[Int]] -> [Int]
+solveFinal targetedUnkowns acceptedBombs totalBombs visibleArray =
     do
-    let dArr = decisionArray (probs targetedUnkowns acceptedBombs totalBombs) --[[vState,!vState]]
+    let dArr = decisionArray (probs targetedUnkowns acceptedBombs totalBombs visibleArray) --[[vState,!vState]]
     let bestMoveVar = bestMoveHelper (dArr) (sum (dArr !! 0)) --[index,action] action == 0 or 2
     let numerator = if ((bestMoveVar !! 1) == 2) then (1) else (0)
-    let finalOutput = 
+    let finalOutput =
                     [ ((targetedUnkowns !! (bestMoveVar !! 0)) !! 0)      --x
                     , ((targetedUnkowns !! (bestMoveVar !! 0)) !! 1)      --y
-                    , (bestMoveVar !! 1)      --action
-                    , numerator      --numerator
-                    , (sum (dArr !! 0))      ]--denominator
+                    , (bestMoveVar !! 1)                                  --action
+                    , numerator                                           --numerator
+                    , (sum (dArr !! 0))      ]                            --denominator
     finalOutput
 
 --THIS IS ANDREWS CODE--
 --isValidFieldInitial:: [[Int]] -> [[Int]] -> [Int] -> Bool
 --isValidFieldInitial fieldProximities bombPositions gamePreset =
 --THIS IS ANDREWS CODE--
-
 
 --IF IT IS A BOMB IT GOES RIGHT
