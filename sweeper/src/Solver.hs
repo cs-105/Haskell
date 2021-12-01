@@ -16,13 +16,81 @@ solve = putStrLn "hi"
 --iterative (solve by turn)
 --loop (solve all)
 
+-- ==========================
+-- main
+-- =================
 
-isValidFieldInitial:: [[Int]] -> [[Int]] -> [Int] -> Bool
-isValidFieldInitial fieldProximities bombPositions gamePreset =
-  (length bombPositions /=  gamePreset!!2) && isValidFieldLoop fieldProximities bombPositions  --gamePrest!!2 = bombcount
+solverMain :: [[[Int]]] -> Int -> [Int]
+solverMain field bombCount = do 
+  let visibleArray = (getVisible field)
+  let flagsAndUnkownsBorderingKnowns = solveLoopInitial visibleArray
+  --montySolve visibleArray bombCount (flagsAndUnkownsBorderingKnowns!!0) (flagsAndUnkownsBorderingKnowns!!1)
+  [0]
+
+
+--solve takes numOfBombs (gamePreset!!2), arrayOfFlagPositions, arrayOfUnknownsNeighboringKnowns 
+
+
+
+
+-- ==========================
+
+
+
+-- ==========================
+-- flag and unknownNeigboringKnwon accumulator loops
+-- =================
+
+solveLoopInitial :: [[Int]] -> [[[Int]]]
+solveLoopInitial array = solveLoop array 0 0 [] []
+
+solveLoop :: [[Int]] -> Int -> Int -> [[Int]] -> [[Int]] -> [[[Int]]]
+solveLoop array x y arrayOfFlagPositions arrayOfUnknownsNeighboringKnowns
+  | x == (length (array!!0)) = solveLoop array 0 (y+1) arrayOfFlagPositions arrayOfUnknownsNeighboringKnowns
+  | y == (length array) = [arrayOfFlagPositions, arrayOfUnknownsNeighboringKnowns]
+  | otherwise = solveCurrent array x y arrayOfFlagPositions arrayOfUnknownsNeighboringKnowns
+
+solveCurrent :: [[Int]] -> Int -> Int -> [[Int]] -> [[Int]] -> [[[Int]]]
+solveCurrent array x y arrayOfFlagPositions arrayOfUnknownsNeighboringKnowns
+  | ((array!!y)!!x) == (-11) = solveLoop array (x+1) y ([x,y]:arrayOfFlagPositions) arrayOfUnknownsNeighboringKnowns
+  | (((array!!y)!!x) == (-10) && (hasKnownNeighbors array x y)) = solveLoop array (x+1) y arrayOfFlagPositions ([x,y]:arrayOfUnknownsNeighboringKnowns)
+  | otherwise = solveLoop array (x+1) y arrayOfFlagPositions arrayOfUnknownsNeighboringKnowns
+
+hasKnownNeighbors :: [[Int]] -> Int -> Int -> Bool
+hasKnownNeighbors array x y =
+  hasKnownNeighborsT array x y
+
+hasKnownNeighborsT :: [[Int]] -> Int -> Int -> Bool
+hasKnownNeighborsT array x y
+  | y > 0 && x > 0 && x < (length (array!!0)) = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsM array x y --Any on top
+  | y > 0 && x > 0 = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || hasKnownNeighborsM array x y --Not TR
+  | y > 0 && x < (length (array!!0)) = ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsM array x y --Not TL
+  | otherwise = hasKnownNeighborsM array x y
+
+hasKnownNeighborsM :: [[Int]] -> Int -> Int -> Bool
+hasKnownNeighborsM array x y
+  | x > 0 && x < (length (array!!0)) = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsB array x y --Either L or R
+  | x > 0 = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 || hasKnownNeighborsB array x y --Not R
+  | x < (length (array!!0)) = ((array!!(y-1))!!(x)) >= 0 || ((array!!(y-1))!!(x+1)) >= 0 || hasKnownNeighborsB array x y--Not L
+  | otherwise = hasKnownNeighborsB array x y
+
+hasKnownNeighborsB :: [[Int]] -> Int -> Int -> Bool
+hasKnownNeighborsB array x y
+  | y < (length array) && x > 0 && x < (length (array!!0)) = ((array!!(y+1))!!(x-1)) >= 0 || ((array!!(y+1))!!(x)) >= 0 || ((array!!(y+1))!!(x+1)) >= 0 --Any on bottom
+  | y < (length array) && x > 0 = ((array!!(y-1))!!(x-1)) >= 0 || ((array!!(y-1))!!(x)) >= 0 --Not BR
+  | y < (length array) && x < (length (array!!0)) = ((array!!(y+1))!!(x)) >= 0 || ((array!!(y+1))!!(x+1)) >= 0 --Not BL
+  | otherwise = 1==0
+
+-- ==========================
+
+
+
+isValidFieldInitial:: [[Int]] -> [[Int]] -> Int -> Bool
+isValidFieldInitial fieldProximities bombPositions bombCount =
+  (length bombPositions /=  bombCount) && isValidFieldLoop fieldProximities bombPositions  --gamePrest!!2 = bombcount
 
 isValidFieldLoop:: [[Int]] -> [[Int]] -> Bool
-isValidFieldLoop fieldProximities [] = isAllZeros fieldProximities --when all the bombs have been decremented
+--isValidFieldLoop fieldProximities [] = isAllZeros fieldProximities --when all the bombs have been decremented
 isValidFieldLoop fieldProximities (bomb:otherBombs) = do
     let tempField = decrementNeighbors fieldProximities (bomb!!0) (bomb!!1)
     (tempField /= []) && isValidFieldLoop tempField otherBombs
@@ -60,7 +128,7 @@ updateDecrementCol (currentRow:restOfRows) xPositions y currentY =
 updateDecrementRow :: [Int] -> [Int] -> Int -> [Int]
 updateDecrementRow (currentProximity:restOfProxInRow) (currentTargetX:otherXs) currentX =
     if currentTargetX==currentX
-        then if currentProximity > 0
+        then if currentProximity > 0 || currentProximity < (-9)
             then if null otherXs
               then (currentProximity-1) : restOfProxInRow --rebuild the prox array
               else do
