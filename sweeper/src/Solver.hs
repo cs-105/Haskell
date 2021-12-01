@@ -86,10 +86,10 @@ hasKnownNeighborsB array x y
 
 isValidFieldInitial:: [[Int]] -> [[Int]] -> Int -> Int
 isValidFieldInitial fieldProximities bombPositions bombCount =
-  if ((length bombPositions /=  bombCount) && (isValidFieldLoop fieldProximities bombPositions))  then 1 else 0 --gamePrest!!2 = bombcount
+  if ((length bombPositions <=  bombCount) && (isValidFieldLoop fieldProximities bombPositions))  then 1 else 0 --gamePrest!!2 = bombcount
 
 isValidFieldLoop:: [[Int]] -> [[Int]] -> Bool
---isValidFieldLoop fieldProximities [] = isAllZeros fieldProximities --when all the bombs have been decremented
+isValidFieldLoop fieldProximities [] = (1==1) --when all the bombs have been decremented
 isValidFieldLoop fieldProximities (bomb:otherBombs) = do
     let tempField = decrementNeighbors fieldProximities (bomb!!0) (bomb!!1)
     (tempField /= []) && isValidFieldLoop tempField otherBombs
